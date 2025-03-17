@@ -4,7 +4,6 @@ from .models import Cliente, Advogado, Processo
 
 
 
-
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer

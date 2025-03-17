@@ -18,5 +18,4 @@ class Processo(models.Model):
     advogado = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     status = models.CharField(max_length=50)
     descricao = models.TextField()
-    data_abertura = models.DateField()
-    data_fechamento = models.DateField()
+    
