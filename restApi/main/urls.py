@@ -17,5 +17,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('registrar-advogado/', views.registrarAdv, name='registrarAdv'),
+    path('registrarAdvogado/', views.registrarAdv, name='registrarAdv'),
+    path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
+    path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
+    
 ]

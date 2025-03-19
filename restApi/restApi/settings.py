@@ -114,6 +114,11 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # para permitir a autenticação via modelo de usuário customizado
 ]
 
+SIMPLE_JWT = {
+    "ALGORITHM": "HS256",
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 

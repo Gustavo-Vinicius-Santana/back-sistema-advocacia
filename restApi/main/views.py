@@ -1,11 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer
 from .models import Cliente, Advogado, Processo
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action
 from django.http import JsonResponse
 from django.conf import settings
+from .emailSender import EmailSender
 import json
 
 
@@ -60,3 +62,38 @@ def registrarAdv(request):
     advogado.set_password(senha)
     advogado.save()
     return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)    
+
+
+@csrf_exempt
+def emailRequestSenha(request):
+   if request.method == 'POST':
+        data = json.loads(request.body)
+        email = data.get('email')
+        user = Advogado.objects.filter(email=email).first()
+        refresh = RefreshToken.for_user(user)
+        refresh["purpose"] = "reset_password" 
+        print(refresh)
+        emailSender = EmailSender('empresadoth@gmail.com')
+        emailSender.startserver()
+        message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:8000/resetPassword/{refresh}'
+        emailSender.sendMensage('Resetar Senha', message)
+        return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
+   else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+
+@csrf_exempt
+def resetPassword(request, token):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        password = data.get('password')
+        refresh = RefreshToken(token)
+        advogado = refresh.payload['user_id']
+        advogado = Advogado.objects.get(id=advogado)
+        advogado.set_password(password)
+        advogado.save()
+        return JsonResponse({'message': 'senha resetada com sucesso'}, status=201)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+#ERRO NO TOKEN PRECISO VER QUAL É...    
