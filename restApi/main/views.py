@@ -96,4 +96,4 @@ def resetPassword(request, token):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
-#ERRO NO TOKEN PRECISO VER QUAL É...    
+#O erro era no cachê   
