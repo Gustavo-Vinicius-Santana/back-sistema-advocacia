@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer
-from .models import Cliente, Advogado, Processo
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer
+from .models import Cliente, Advogado, Processo, Tarefas
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action
 from django.http import JsonResponse
@@ -30,6 +30,12 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
+    
+class TarefasViewSet(viewsets.ModelViewSet):
+    queryset = Tarefas.objects.all()
+    serializer_class = TarefasSerializer
+    permission_classes = [IsAuthenticated]
+
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
@@ -48,6 +54,7 @@ def registrarAdv(request):
     sexo = data.get('sexo')
     email = data.get('email')
     senha = data.get('senha')
+    oab = data.get('oab')
     
     if not nome or not email:
         return JsonResponse ({"error": "Nome e email são obrigatórios."}, status=400)
@@ -57,7 +64,8 @@ def registrarAdv(request):
         email=email,
         rg = rg, 
         cpf = cpf, 
-        sexo = sexo
+        sexo = sexo,
+        oab = oab
         )
     advogado.set_password(senha)
     advogado.save()

@@ -6,6 +6,15 @@ class Cliente(models.Model):
     rg = models.CharField(max_length=20, unique=True)
     cpf = models.CharField(max_length=14, unique=True)
     sexo = models.CharField(max_length=10)
+    telefone = models.CharField(max_length=20)
+    fidelizado = models.BooleanField(default=False)
+    observacoes = models.TextField(default="Nenhuma observação.")
+    endereco = models.CharField(max_length=255)
+    nacionalidade = models.CharField(max_length=255)
+    profissao = models.CharField(max_length=255)
+    #parceiro = adm vai criar uma lista
+    senhaInss = models.CharField(max_length=255)
+    
 
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
@@ -13,6 +22,7 @@ class Advogado(AbstractBaseUser, models.Model):
     cpf = models.CharField(max_length=14, unique=True)
     sexo = models.CharField(max_length=10)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
+    oab = models.CharField(max_length=20, unique=True)
     
     #Django pede essas paradas pra o login, o nome é autoexplicativo
     is_active = models.BooleanField(default=True)
@@ -81,4 +91,23 @@ class Processo(models.Model):
     advogado = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     status = models.CharField(max_length=50)
     descricao = models.TextField()
+    dataCriacao = models.DateTimeField(auto_now_add=True)
+    dataEncerramento = models.DateTimeField(null=True, blank=True)
+    classificacao = models.CharField(max_length=50)
+    prioritario = models.BooleanField(default=False)
+    #tipo = adm escolhe o tipo
+    #grupo = adm escolhe o grupo
+    
+
+class Tarefas(models.Model):
+    advogadoResponsavel = models.ForeignKey(Advogado, on_delete=models.CASCADE)
+    advogadoCriador = models.ForeignKey(Advogado, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=50)
+    descricao = models.TextField() #vai se atualizar timeline
+    dataCriacao = models.DateTimeField(auto_now_add=True)
+    dataEncerramento = models.DateTimeField(null=True, blank=True)
+    prazo = models.IntegerField() #em dias
+    status = models.CharField(max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
+    prioritario = models.BooleanField(default=False)
+    #tipo = adm escolhe o tipo
     

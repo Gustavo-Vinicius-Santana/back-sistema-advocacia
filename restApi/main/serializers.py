@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Cliente, Advogado, Processo
+from .models import Cliente, Advogado, Processo,Tarefas
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,4 +14,10 @@ class AdvogadoSerializer(serializers.ModelSerializer):
 class ProcessoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Processo
+        fields = '__all__'
+
+
+class TarefasSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tarefas
         fields = '__all__'
