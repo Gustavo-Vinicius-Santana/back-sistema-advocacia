@@ -53,7 +53,7 @@ def registrarAdv(request):
     cpf = data.get('cpf')
     sexo = data.get('sexo')
     email = data.get('email')
-    senha = data.get('senha')
+    password = data.get('password')
     oab = data.get('oab')
     
     if not nome or not email:
@@ -65,11 +65,17 @@ def registrarAdv(request):
         rg = rg, 
         cpf = cpf, 
         sexo = sexo,
-        oab = oab
+        oab = oab,
+        password=password
         )
-    advogado.set_password(senha)
+    advogado.set_password(password)
     advogado.save()
     return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)    
+"""BUG no Login,02/06/2023
+Descrição: O login diz que não existe usuário cadastrado com esse email, 
+preciso debugar mais calmamente.
+RESOLVIDO em 03/06/2023
+"""
 
 
 @csrf_exempt

@@ -10,6 +10,7 @@ router = DefaultRouter()
 router.register(r'clientes', ClienteViewSet)
 router.register(r'advogados', AdvogadoViewSet)
 router.register(r'processos', ProcessoViewSet)
+router.register(r'tarefas', views.TarefasViewSet)
 
 """Dessa forma ai em cima o router do django ja vai criar as views [GET, POST, PUT, DELETE E PATCH]"""
 
