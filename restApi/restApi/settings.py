@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'main',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
     
 ]
 REST_FRAMEWORK = {
@@ -50,13 +51,17 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 API_SECRET_KEY = "3f0c35dc-73b4-4c7d-862e-09ee041c5a7c"
 API_HEADER_NAME = "AdvKey"
