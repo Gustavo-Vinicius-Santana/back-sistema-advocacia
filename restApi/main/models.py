@@ -16,7 +16,7 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20, unique=True)
     endereco = models.CharField(max_length=255, default="Sem endereço.")
     observacoes = models.TextField(default="Nenhuma observação.")
-    s
+
     def __str__(self):
         return f'Cliente {self.nome}'
     
@@ -67,7 +67,7 @@ class Advogado(AbstractBaseUser, models.Model):
     
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome','password','rg','cpf','sexo','oab']   
+    REQUIRED_FIELDS = ['nome','password','telefone','sexo']   
     
     def __str__(self):
         return self.nome

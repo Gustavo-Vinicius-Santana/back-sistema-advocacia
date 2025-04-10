@@ -49,8 +49,6 @@ def registrarAdv(request):
     
     data = json.loads(request.body)
     nome = data.get('nome')
-    rg = data.get('rg')
-    cpf = data.get('cpf')
     sexo = data.get('sexo')
     email = data.get('email')
     password = data.get('password')
@@ -62,8 +60,6 @@ def registrarAdv(request):
     advogado = Advogado.objects.create(
         nome=nome, 
         email=email,
-        rg = rg, 
-        cpf = cpf, 
         sexo = sexo,
         oab = oab,
         password=password
