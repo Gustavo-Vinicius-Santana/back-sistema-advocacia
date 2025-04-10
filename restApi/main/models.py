@@ -1,25 +1,29 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
+import time 
 
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
-    rg = models.CharField(max_length=20, unique=True)
     cpf = models.CharField(max_length=14, unique=True)
     sexo = models.CharField(max_length=10)
-    telefone = models.CharField(max_length=20, default="Sem telefone.")
-    fidelizado = models.BooleanField(default=False)
-    observacoes = models.TextField(default="Nenhuma observação.")
-    endereco = models.CharField(max_length=255, default="Sem endereço.")
     nacionalidade = models.CharField(max_length=255,default="Nenhuma nacionalidade.")
-    profissao = models.CharField(max_length=255,default="Nenhuma profissão.")
-    #parceiro = adm vai criar uma lista
     senhaInss = models.CharField(max_length=255,default="Nenhuma senha.")
+    fidelizado = models.BooleanField(default=False)
+    endereco = models.CharField(max_length=255, default="Sem endereço.")
+    telefone = models.CharField(max_length=20, default="Sem telefone.")
+    parceiro = models.CharField(max_length=255, default="Sem parceiro.")
+    cep = models.CharField(max_length=20, unique=True)
+    endereco = models.CharField(max_length=255, default="Sem endereço.")
+    observacoes = models.TextField(default="Nenhuma observação.")
     
+    def __str__(self):
+        return f'Cliente {self.nome}'
+    
+        
 
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
-    rg = models.CharField(max_length=20, unique=True)
-    cpf = models.CharField(max_length=14, unique=True)
+    telefone = models.CharField(max_length=20)
     sexo = models.CharField(max_length=10)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
     oab = models.CharField(max_length=20, default='Nenhuma OAB')
