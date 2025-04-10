@@ -12,10 +12,11 @@ class Cliente(models.Model):
     endereco = models.CharField(max_length=255, default="Sem endereço.")
     telefone = models.CharField(max_length=20, default="Sem telefone.")
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
+    profissao = models.CharField(max_length=255, default="Sem profissão.")
     cep = models.CharField(max_length=20, unique=True)
     endereco = models.CharField(max_length=255, default="Sem endereço.")
     observacoes = models.TextField(default="Nenhuma observação.")
-    
+    s
     def __str__(self):
         return f'Cliente {self.nome}'
     
