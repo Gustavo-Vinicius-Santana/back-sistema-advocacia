@@ -1,6 +1,5 @@
 from django.urls import path, include
-from .views import ClienteViewSet, AdvogadoViewSet
-from .views import ClienteViewSet, AdvogadoViewSet, ProcessoViewSet
+from .views import ClienteViewSet, AdvogadoViewSet, ProcessoViewSet,TarefasViewSet
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
