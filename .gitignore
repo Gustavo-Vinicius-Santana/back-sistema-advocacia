@@ -17,10 +17,10 @@ media/
 staticfiles/
 
 # Migrations
-*/migrations/__pycache__/
-*/migrations/*.pyc
-*/migrations/*.pyo
-*/migrations/*.pyd
+*restApi/main/migrations/__pycache__/
+*restApi/main/migrations/*.pyc
+*restApi/main/migrations/*.pyo
+*restApi/main/migrations/*.pyd
 
 # PyCharm
 .idea/

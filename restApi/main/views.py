@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer
-from .models import Cliente, Advogado, Processo
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer
+from .models import Cliente, Advogado, Processo, Tarefas
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action
 from django.http import JsonResponse
@@ -30,6 +30,12 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
+    
+class TarefasViewSet(viewsets.ModelViewSet):
+    queryset = Tarefas.objects.all()
+    serializer_class = TarefasSerializer
+    permission_classes = [IsAuthenticated]
+
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
@@ -43,11 +49,10 @@ def registrarAdv(request):
     
     data = json.loads(request.body)
     nome = data.get('nome')
-    rg = data.get('rg')
-    cpf = data.get('cpf')
     sexo = data.get('sexo')
     email = data.get('email')
-    senha = data.get('senha')
+    password = data.get('password')
+    oab = data.get('oab')
     
     if not nome or not email:
         return JsonResponse ({"error": "Nome e email são obrigatórios."}, status=400)
@@ -55,13 +60,18 @@ def registrarAdv(request):
     advogado = Advogado.objects.create(
         nome=nome, 
         email=email,
-        rg = rg, 
-        cpf = cpf, 
-        sexo = sexo
+        sexo = sexo,
+        oab = oab,
+        password=password
         )
-    advogado.set_password(senha)
+    advogado.set_password(password)
     advogado.save()
     return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)    
+"""BUG no Login,02/06/2023
+Descrição: O login diz que não existe usuário cadastrado com esse email, 
+preciso debugar mais calmamente.
+RESOLVIDO em 03/06/2023
+"""
 
 
 @csrf_exempt
