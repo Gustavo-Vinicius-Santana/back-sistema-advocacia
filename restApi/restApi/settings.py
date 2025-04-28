@@ -130,7 +130,7 @@ AUTHENTICATION_BACKENDS = [
 
 SIMPLE_JWT = {
     "ALGORITHM": "HS256",
-    "ACCES_TOKEN_LIFETAME":timedelta(hours=8),
+    "ACCESS_TOKEN_LIFETIME":timedelta(hours=8),
 }
 
 
