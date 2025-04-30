@@ -4,10 +4,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer
 from .models import Cliente, Advogado, Processo, Tarefas
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
+from django.shortcuts import get_object_or_404
 import json
 
 
@@ -16,6 +17,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
+    
     
         
     
@@ -106,4 +108,22 @@ def resetPassword(request, token):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosClientes(request,cliente_id):
+    if request.method == 'GET':
+        
+        if not cliente_id:
+            return JsonResponse({'error': 'ID do cliente obrigatório.'}, status=400)     
+        try:
+            cliente = get_object_or_404(Cliente, id=cliente_id)
+        except:
+            return JsonResponse({'error': 'Cliente nao encontrado.'}, status=404)
+        processos = Processo.objects.filter(cliente=cliente)
+        serializer = ProcessoSerializer(processos, many=True)
+        return JsonResponse(serializer.data, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+        
 #O erro era no cachê   

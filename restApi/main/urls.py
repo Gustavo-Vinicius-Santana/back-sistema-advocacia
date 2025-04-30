@@ -21,5 +21,6 @@ urlpatterns = [
     path('registrarAdvogado/', views.registrarAdv, name='registrarAdv'),
     path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
+    path('processos/clientes/<int:cliente_id>', views.processosClientes, name='processosClientes'),
     
 ]
