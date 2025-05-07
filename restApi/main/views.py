@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer
 from .models import Cliente, Advogado, Processo, Tarefas
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes
@@ -120,10 +120,83 @@ def processosClientes(request,cliente_id):
             cliente = get_object_or_404(Cliente, id=cliente_id)
         except:
             return JsonResponse({'error': 'Cliente nao encontrado.'}, status=404)
-        processos = Processo.objects.filter(cliente=cliente)
+        processos = Processo.objects.filter(clienteId=cliente)
         serializer = ProcessoSerializer(processos, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        jsonFile = serializer.data
+        advogadoResponsavelNome = get_object_or_404(Advogado, id=jsonFile[0]['advogadoResponsavelId'])
+        if jsonFile:
+            try:
+                jsonFile[0]['advogadoResponsavelNome']= advogadoResponsavelNome.nome
+                jsonFile[0]['clienteNome'] = cliente.nome
+            except:
+                jsonFile[0]['advogadoResponsavelNome']= 'Não encontrados'
+        return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
 #O erro era no cachê   
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasProcesso(request,processo_id):
+    if request.method == 'GET':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo obrigatório.'}, status=400)     
+        try:
+            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id)    
+        except:
+            return JsonResponse({'error': 'Processo não encontrado.'})
+        
+        serializer = TarefasSerializer(tarefas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+        
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosAdvogado(request,advogado_id):
+    if request.method == 'GET':
+        if not advogado_id:
+            return JsonResponse({'error': 'ID do advogado é obrigatório.'})
+        try:
+            processo = Processo.objects.filter(advogadoResponsavelId=advogado_id)   
+        except:
+            return JsonResponse({'error': 'Advogado nao encontrado.'})
+        serializer = ProcessoSerializer(processo, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'}, status=405)
+    
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def advogadosResumido(request):
+    if request.method == 'GET':
+        advogados = Advogado.objects.all()
+        serializer = AdvogadoResumidoSerializer(advogados, many = True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error' : 'Método não permitido'},status = 404)
+    
+    
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosResumido(request):
+    if request.method == 'GET':
+        processos = Processo.objects.all()
+        serializer =ProcesssosResumidoSerializer(processos, many = True)   
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error' : 'Método não permitido'},status = 404)
+    
+    
+
+

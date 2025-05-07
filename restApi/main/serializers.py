@@ -17,6 +17,18 @@ class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
         fields = '__all__'
+        
+class AdvogadoResumidoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Advogado
+        fields = ['id','nome']
+        
+
+class ProcesssosResumidoSerializer(serializers.ModelSerializer):
+    advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True) 
+    class Meta:
+        model = Processo
+        fields = ['id','advogadoResponsavelId','advogadoResponsavelNome']
 
 class ProcessoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,8 +37,8 @@ class ProcessoSerializer(serializers.ModelSerializer):
 
 
 class TarefasSerializer(serializers.ModelSerializer):
-    criador_nome = serializers.CharField(source='criador.nome',read_only=True)
-    advogadoResponsavel_nome = serializers.CharField(source='advogadoResponsavel.nome',read_only=True)
+    advogadoCriadorNome = serializers.CharField(source='AdvogadoCriadorId.nome',read_only=True)
+    advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
     
     class Meta:
         model = Tarefas

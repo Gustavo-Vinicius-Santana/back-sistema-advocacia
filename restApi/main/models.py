@@ -104,8 +104,8 @@ class Advogado(AbstractBaseUser, models.Model):
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
     status = models.CharField(max_length=50)
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    advogadoResponsavel = models.ForeignKey(Advogado, on_delete=models.CASCADE)
+    clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     prazoContrato = models.DateTimeField(null=True, blank=True)
@@ -117,8 +117,9 @@ class Processo(models.Model):
     
 
 class Tarefas(models.Model):
-    criador = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
-    advogadoResponsavel = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
+    advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
+    processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.CharField(max_length=50)
     descricao = models.TextField() #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)
