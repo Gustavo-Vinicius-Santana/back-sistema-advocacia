@@ -2,10 +2,20 @@ from rest_framework import serializers
 from .models import Cliente, Advogado, Processo,Tarefas
 
 class ClienteSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = '__all__'
-    
+        fields = ['nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','contrato','motivo','endereco','observacoes']
+    def get_endereco(self,obj):
+        endereco = {
+            'cep':obj.cep,
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'cidade':obj.cidade,
+            'complemento':obj.complemento,
+            }
+        return endereco
     def validate(self,data):
         contrato = data.get('contrato')
         motivo = data.get('motivo')

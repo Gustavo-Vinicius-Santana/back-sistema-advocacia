@@ -16,9 +16,11 @@ class Cliente(models.Model):
     contrato = models.BooleanField(default=False)
     motivo = models.CharField(max_length=255, default="Sem motivo.", blank=True)
     cep = models.CharField(max_length=20, unique=True)
-    bairro = models.CharField(max_length=255)
-    rua = models.CharField(max_length=255)
-    estado = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255)
+    rua = models.CharField(max_length=255,default="Sem rua.")
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,default="Sem cidade.")
+    estado = models.CharField(max_length=255,default="Sem estado.")
     observacoes = models.TextField(default="Nenhuma observação.")
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
