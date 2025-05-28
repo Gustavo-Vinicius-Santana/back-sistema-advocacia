@@ -199,4 +199,24 @@ def processosResumido(request):
     
     
 
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasAdvogadoCriador(request,advogado_id):
+    if request.method == 'GET':
+        if not advogado_id:
+            return JsonResponse({'error': 'ID do advogado é obrigatório.'})
+        try:
+            tarefas = Tarefas.objects.filter(advogadoCriadorId=advogado_id)   
+        except:
+            return JsonResponse({'error': 'Advogado nao encontrado.'})
+        if not tarefas:
+            return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'})
+        serializer = TarefasSerializer(tarefas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'}, status=405)
+    
+    
+
 

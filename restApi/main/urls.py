@@ -26,5 +26,6 @@ urlpatterns = [
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
     path('advogados/resumido', views.advogadosResumido, name= 'advogadosResumido'),
     path('processos/resumido', views.processosResumido, name= 'processosResumido'),
+    path('tarefas/advogado/<int:advogado_id>', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador')
     
 ]
