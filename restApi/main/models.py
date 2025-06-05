@@ -16,9 +16,11 @@ class Cliente(models.Model):
     contrato = models.BooleanField(default=False)
     motivo = models.CharField(max_length=255, default="Sem motivo.", blank=True)
     cep = models.CharField(max_length=20, unique=True)
-    bairro = models.CharField(max_length=255)
-    rua = models.CharField(max_length=255)
-    estado = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255)
+    rua = models.CharField(max_length=255,default="Sem rua.")
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,default="Sem cidade.")
+    estado = models.CharField(max_length=255,default="Sem estado.")
     observacoes = models.TextField(default="Nenhuma observação.")
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
@@ -104,8 +106,8 @@ class Advogado(AbstractBaseUser, models.Model):
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
     status = models.CharField(max_length=50)
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    advogadoResponsavel = models.ForeignKey(Advogado, on_delete=models.CASCADE)
+    clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     prazoContrato = models.DateTimeField(null=True, blank=True)
@@ -117,8 +119,9 @@ class Processo(models.Model):
     
 
 class Tarefas(models.Model):
-    criador = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
-    advogadoResponsavel = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
+    advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
+    processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.CharField(max_length=50)
     descricao = models.TextField() #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)

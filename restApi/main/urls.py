@@ -21,5 +21,12 @@ urlpatterns = [
     path('registrarAdvogado/', views.registrarAdv, name='registrarAdv'),
     path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
+    path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'),
+    path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
+    path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
+    path('advogados/resumido', views.advogadosResumido, name= 'advogadosResumido'),
+    path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard'),
+    path('processos/resumido', views.processosResumido, name= 'processosResumido'),
+    path('tarefas/advogado/<int:advogado_id>', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador')
     
 ]
