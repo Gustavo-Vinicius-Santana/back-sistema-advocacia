@@ -123,13 +123,13 @@ def processosClientes(request,cliente_id):
         processos = Processo.objects.filter(clienteId=cliente)
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
-        advogadoResponsavelNome = get_object_or_404(Advogado, id=jsonFile[0]['advogadoResponsavelId'])
+        advogadCriadorNome = get_object_or_404(Advogado, id=jsonFile[0]['advogadoCriadorId'])
         if jsonFile:
             try:
-                jsonFile[0]['advogadoResponsavelNome']= advogadoResponsavelNome.nome
+                jsonFile[0]['advogadCriadorNome']= advogadCriadorNome.nome
                 jsonFile[0]['clienteNome'] = cliente.nome
             except:
-                jsonFile[0]['advogadoResponsavelNome']= 'Não encontrados'
+                jsonFile[0]['advogadCriadorNome']= 'Não encontrados'
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
@@ -216,7 +216,35 @@ def tarefasAdvogadoCriador(request,advogado_id):
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
-    
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def advogadosDashboard(request,advogado_id):
+    if request.method == 'GET':
+        if not advogado_id:
+            return JsonResponse({'error': 'ID do advogado é obrigatório.'},status=400)
+        tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
+        processosCriados = Processo.objects.filter(advogadoCriadorId=advogado_id)
+        
+        if not tarefas.exists():
+            return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'},status=400)
+        
+        tarefasConlcuidas = tarefas.filter(status='Finalizada')
+        tarefasPendentes = tarefas.filter(status='Em andamento')
+        
+        jsonFileConcluidas = TarefasSerializer(tarefasConlcuidas, many=True).data
+        jsonFilePendentes = TarefasSerializer(tarefasPendentes, many=True).data
+        jsonFileProcessos = ProcessoSerializer(processosCriados, many=True).data
+        
+        return JsonResponse({
+            'tarefasConcluidas': jsonFileConcluidas,
+            'tarefasPendentes': jsonFilePendentes,
+            'processosCriados': jsonFileProcessos
+        },safe=True)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'},status = 405) 
+        
     
 
 

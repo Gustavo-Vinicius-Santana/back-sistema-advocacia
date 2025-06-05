@@ -5,7 +5,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','contrato','motivo','endereco','observacoes']
+        fields = ['id','nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','contrato','motivo','cep', 'numero', 'rua', 'estado', 'cidade', 'complemento','endereco','observacoes']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -35,10 +35,10 @@ class AdvogadoResumidoSerializer(serializers.ModelSerializer):
         
 
 class ProcesssosResumidoSerializer(serializers.ModelSerializer):
-    advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True) 
+    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True) 
     class Meta:
         model = Processo
-        fields = ['id','advogadoResponsavelId','advogadoResponsavelNome']
+        fields = ['id','advogadoCriadorId','advogadoCriadorNome']
 
 class ProcessoSerializer(serializers.ModelSerializer):
     class Meta:

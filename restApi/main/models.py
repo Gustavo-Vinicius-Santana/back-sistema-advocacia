@@ -107,7 +107,7 @@ class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
     status = models.CharField(max_length=50)
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     prazoContrato = models.DateTimeField(null=True, blank=True)
