@@ -36,11 +36,16 @@ class AdvogadoResumidoSerializer(serializers.ModelSerializer):
 
 class ProcesssosResumidoSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True) 
+    cliente = serializers.CharField(source='clienteId.nome',read_only=True)
+    
     class Meta:
         model = Processo
-        fields = ['id','advogadoCriadorId','advogadoCriadorNome']
+        fields = ['id','advogadoCriadorId','advogadoCriadorNome','cliente']
 
 class ProcessoSerializer(serializers.ModelSerializer):
+    clienteNome = serializers.CharField(source='clienteId.nome',read_only=True)
+    dataContrato = serializers.DateTimeField(format="%d/%m/%Y %H:%M")
+    prazoContrato = serializers.DateTimeField(format="%d/%m/%Y %H:%M")  
     class Meta:
         model = Processo
         fields = '__all__'
@@ -49,7 +54,8 @@ class ProcessoSerializer(serializers.ModelSerializer):
 class TarefasSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='AdvogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
-    
+    dataInicio = serializers.DateTimeField(format="%d/%m/%Y %H:%M")
+    prazoFinal = serializers.DateTimeField(format="%d/%m/%Y %H:%M")
     class Meta:
         model = Tarefas
         fields = '__all__'

@@ -105,7 +105,12 @@ DATABASES = {
 
     }
 }
-                                                                                                                            
+
+
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+DATE_FORMAT = '%Y-%m-%d'
+L1ON = False
+                                                                                                                        
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
