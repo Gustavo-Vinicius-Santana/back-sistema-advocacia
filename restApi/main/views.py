@@ -246,5 +246,17 @@ def advogadosDashboard(request,advogado_id):
         return JsonResponse({'error' : 'Método não permitido.'},status = 405) 
         
     
+    
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def advUserInfo(request):
+    if request.method == 'GET':
+        advogado = request.user
+        serializer = AdvogadoSerializer(advogado)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'},status = 405)
 
 
