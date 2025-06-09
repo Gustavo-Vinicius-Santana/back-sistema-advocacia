@@ -4,12 +4,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer
 from .models import Cliente, Advogado, Processo, Tarefas
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import action, permission_classes
+from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 import json
+import jwt
+from jwt.exceptions import InvalidTokenError
+from rest_framework.response import Response
+from rest_framework import status
+
+
 
 
 
@@ -249,14 +255,28 @@ def advogadosDashboard(request,advogado_id):
     
 
 @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(['GET'])
 def advUserInfo(request):
-    if request.method == 'GET':
-        advogado = request.user
+    token = request.headers.get('Authorization')
+
+    if not token:
+        return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        token_format = token.split(' ')[1]
+        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+        advogado_id = payload.get('user_id')
+        advogado = Advogado.objects.get(id=advogado_id)
         serializer = AdvogadoSerializer(advogado)
-        jsonFile = serializer.data
-        return JsonResponse(jsonFile, safe=False)
-    else:
-        return JsonResponse({'error' : 'Método não permitido.'},status = 405)
+        return Response(serializer.data)
+    except IndexError:
+        return Response({'error': 'Formato do token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+    except InvalidTokenError:
+        return Response({'error': 'Token inválido ou expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
+    except Advogado.DoesNotExist:
+        return Response({'error': 'Advogado não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 

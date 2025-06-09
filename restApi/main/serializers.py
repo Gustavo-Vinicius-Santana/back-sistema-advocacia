@@ -26,7 +26,7 @@ class ClienteSerializer(serializers.ModelSerializer):
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = '__all__'
+        fields = ['id','nome','email','sexo','oab']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:
