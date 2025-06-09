@@ -27,6 +27,7 @@ urlpatterns = [
     path('advogados/resumido', views.advogadosResumido, name= 'advogadosResumido'),
     path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard'),
     path('processos/resumido', views.processosResumido, name= 'processosResumido'),
-    path('tarefas/advogado/<int:advogado_id>', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador')
+    path('tarefas/advogado/<int:advogado_id>', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador'),
+    path('advogados/user',views.advUserInfo, name='advUserInfo')
     
 ]
