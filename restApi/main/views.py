@@ -38,11 +38,14 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
-    
 class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
+    
+        
+                    
+
 
 @csrf_exempt
 @action(detail=True, methods=['post'])

@@ -105,8 +105,8 @@ class Advogado(AbstractBaseUser, models.Model):
 
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
-    STATUS_CHOICES = [('Pendente','pendente'),('Concluido','concluido'),('Atrasado','atrasado')]
-    status = models.CharField(max_length=50)
+    STATUS_CHOICES = [('pendente','Pendente'),('concluido','Concluido'),('atrasado','Atrasado')]
+    status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='pendente')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
@@ -120,7 +120,7 @@ class Processo(models.Model):
     
 
 class Tarefas(models.Model):
-    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.CharField(max_length=50)
@@ -128,7 +128,7 @@ class Tarefas(models.Model):
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
     urgente = models.BooleanField(default=False)
-    STATUS_CHOICES = [('Pendente','pendente'),('Concluida','concluida'),('Atrasada','atrasada')]
+    STATUS_CHOICES = [('pendente','Pendente'),('concluida','Concluida'),('atrasada','Atrasada')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.")
         
