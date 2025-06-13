@@ -239,8 +239,8 @@ def advogadosDashboard(request,advogado_id):
         if not tarefas.exists():
             return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'},status=400)
         
-        tarefasConlcuidas = tarefas.filter(status='Finalizada')
-        tarefasPendentes = tarefas.filter(status='Em andamento')
+        tarefasConlcuidas = tarefas.filter(status='Finalizada').count()
+        tarefasPendentes = tarefas.filter(status='Em andamento').count()
         
         jsonFileConcluidas = TarefasSerializer(tarefasConlcuidas, many=True).data
         jsonFilePendentes = TarefasSerializer(tarefasPendentes, many=True).data
