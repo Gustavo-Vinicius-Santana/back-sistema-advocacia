@@ -234,22 +234,20 @@ def advogadosDashboard(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'},status=400)
         tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
-        processosCriados = Processo.objects.filter(advogadoCriadorId=advogado_id)
+        processosCriados = Processo.objects.filter(advogadoCriadorId=advogado_id).count()
         
         if not tarefas.exists():
             return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'},status=400)
         
-        tarefasConlcuidas = tarefas.filter(status='Finalizada').count()
+        tarefasConcluidas = tarefas.filter(status='Finalizada').count()
         tarefasPendentes = tarefas.filter(status='Em andamento').count()
         
-        jsonFileConcluidas = TarefasSerializer(tarefasConlcuidas, many=True).data
-        jsonFilePendentes = TarefasSerializer(tarefasPendentes, many=True).data
-        jsonFileProcessos = ProcessoSerializer(processosCriados, many=True).data
+        
         
         return JsonResponse({
-            'tarefasConcluidas': jsonFileConcluidas,
-            'tarefasPendentes': jsonFilePendentes,
-            'processosCriados': jsonFileProcessos
+            'tarefasConcluidas':tarefasConcluidas,
+            'tarefasPendentes': tarefasPendentes,
+            'processosCriados': processosCriados
         },safe=True)
     else:
         return JsonResponse({'error' : 'Método não permitido.'},status = 405) 
