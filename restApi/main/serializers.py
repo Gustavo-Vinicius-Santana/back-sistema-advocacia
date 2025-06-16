@@ -45,7 +45,8 @@ class ProcesssosResumidoSerializer(serializers.ModelSerializer):
 class ProcessoSerializer(serializers.ModelSerializer):
     clienteNome = serializers.CharField(source='clienteId.nome',read_only=True)
     dataContrato = serializers.DateTimeField(format="%d/%m/%Y")
-    prazoContrato = serializers.DateTimeField(format="%d/%m/%Y")  
+    prazoContrato = serializers.DateTimeField(format="%d/%m/%Y") 
+    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     class Meta:
         model = Processo
         fields = '__all__'
