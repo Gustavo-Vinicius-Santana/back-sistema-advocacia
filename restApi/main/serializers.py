@@ -1,17 +1,19 @@
 from rest_framework import serializers
-from .models import Cliente, Advogado, Processo,Tarefas
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera
 
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','contrato','motivo','cep', 'numero', 'rua', 'estado', 'cidade', 'complemento','endereco','observacoes']
+        fields = ['id','nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
             'numero':obj.numero,
             'rua':obj.rua,
             'estado':obj.estado,
+            'bairro':obj.bairro,
             'cidade':obj.cidade,
             'complemento':obj.complemento,
             }
@@ -22,11 +24,28 @@ class ClienteSerializer(serializers.ModelSerializer):
         if contrato == False and(not motivo or motivo.strip() == "Sem motivo."):
             raise serializers.ValidationError({"motivo": "Se o contrato for False, o motivo deve ser preenchido."})
         return data
+    
 
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # Adiciona etapas customizadas ao login
+        data = super().validate(attrs)
+        print("passou pelo validate do login")
+        user = self.user
+        if user.is_active:
+            user.is_online = True
+            user.save()
+        return data
+    
+class ClienteEsperaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClienteEspera
+        fields = ['id','nome','telefone','observacao','IdAdvogado']
+        
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = ['id','nome','email','sexo','oab']
+        fields = ['id','nome','email','sexo','oab','is_online']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:

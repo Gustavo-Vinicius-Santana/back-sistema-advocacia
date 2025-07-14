@@ -1,8 +1,9 @@
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer
-from .models import Cliente, Advogado, Processo, Tarefas
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer
+from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
@@ -11,6 +12,7 @@ from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 import json
 import jwt
+from rest_framework_simplejwt.views import TokenObtainPairView
 from jwt.exceptions import InvalidTokenError
 from rest_framework.response import Response
 from rest_framework import status
@@ -43,8 +45,38 @@ class TarefasViewSet(viewsets.ModelViewSet):
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
     
-        
+class ClienteEsperaViewSet(viewsets.ModelViewSet):
+    queryset = ClienteEspera.objects.all()
+    serializer_class = ClienteEsperaSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
                     
+                    
+                    
+class AdvogadosOnlineView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        advogados = Advogado.objects.filter(is_online=True)
+        serializer = AdvogadoSerializer(advogados, many=True)
+        print("passou pelo get do AdvogadosOnlineView")
+        return Response(serializer.data)
+
+
+class AdvogadoLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        user.is_online = False
+        user.save()
+        print("passou pelo post do AdvogadoLogoutView")
+        return Response({"detail": "Logout realizado com sucesso."})
+
 
 
 @csrf_exempt
@@ -116,6 +148,7 @@ def resetPassword(request, token):
         return JsonResponse({'message': 'senha resetada com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
 
 
 @permission_classes([IsAuthenticated])
