@@ -30,7 +30,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         # Adiciona etapas customizadas ao login
         data = super().validate(attrs)
-        print("passou pelo validate do login")
         user = self.user
         if user.is_active:
             user.is_online = True

@@ -63,7 +63,6 @@ class AdvogadosOnlineView(APIView):
     def get(self, request):
         advogados = Advogado.objects.filter(is_online=True)
         serializer = AdvogadoSerializer(advogados, many=True)
-        print("passou pelo get do AdvogadosOnlineView")
         return Response(serializer.data)
 
 
@@ -74,8 +73,8 @@ class AdvogadoLogoutView(APIView):
         user = request.user
         user.is_online = False
         user.save()
-        print("passou pelo post do AdvogadoLogoutView")
         return Response({"detail": "Logout realizado com sucesso."})
+        #implementar o logout baseado no tempo do Token JWT
 
 
 
@@ -314,3 +313,27 @@ def advUserInfo(request):
 
 
 
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def clientesEsperaAdv(request,advogado_id):
+    if request.method == 'GET':
+        if not advogado_id:
+            return JsonResponse({'error':'O ID do advogado é obrigatório.'})
+        try:
+            clientesEsperaAdv = []
+            clientesEspera = ClienteEspera.objects.filter(IdAdvogado=advogado_id)
+            for cliente in clientesEspera:
+                cliente_data = {
+                    'id': cliente.id,
+                    'nome': cliente.nome,
+                    'telefone': cliente.telefone,
+                    'observacao': cliente.observacao,
+                    'IdAdvogado': cliente.IdAdvogado
+                }
+                clientesEsperaAdv.append(cliente_data)
+            return JsonResponse(clientesEsperaAdv, safe=False)
+        except ClienteEspera.DoesNotExist:
+            return JsonResponse({'error': 'Nenhum cliente encontrado.'}, status=404)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)        

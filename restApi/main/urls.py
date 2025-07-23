@@ -35,6 +35,7 @@ urlpatterns = [
     path('tarefas/advogado/<int:advogado_id>/', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador'),
     path('advogados/user/',views.advUserInfo, name='advUserInfo'),
     path('advogados/online/', AdvogadosOnlineView.as_view(), name='advogadosOnline'),
+    path('advogados/<int:advogado_id>/clientesEspera/',views.clientesEsperaAdv, name='clientesEsperaAdv'),
     path('advogados/logout/', AdvogadoLogoutView.as_view(), name='advogadosLogout'),
     path('', include(router.urls)),
     
