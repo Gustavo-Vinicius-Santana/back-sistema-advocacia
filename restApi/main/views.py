@@ -329,7 +329,8 @@ def clientesEsperaAdv(request,advogado_id):
                     'nome': cliente.nome,
                     'telefone': cliente.telefone,
                     'observacao': cliente.observacao,
-                    'IdAdvogado': cliente.IdAdvogado
+                    'IdAdvogado': cliente.IdAdvogado,
+                    'cpf': cliente.cpf
                 }
                 clientesEsperaAdv.append(cliente_data)
             return JsonResponse(clientesEsperaAdv, safe=False)
