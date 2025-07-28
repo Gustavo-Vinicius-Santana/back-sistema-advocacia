@@ -28,6 +28,10 @@ class Cliente(models.Model):
     garantido que seja escrito se for False pelo validation error la no serializer.py.
     #Atualização: 14/07/2025 Contrato e motivo foram removidos"""
     
+    """Bug no retorno das fotos:16/07/2025 
+        O django não retorna a foto quando eu acesso via browser.
+    """
+    
     
    
     def __str__(self):
@@ -42,6 +46,7 @@ class ClienteEspera(models.Model):
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     observacao = models.TextField(default="Nenhuma observação.",blank=True)
     IdAdvogado = models.IntegerField(default=0)
+    cpf = models.CharField(max_length=14, unique=True, default="Sem CPF.")
 
 
 
