@@ -39,7 +39,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ClienteEsperaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClienteEspera
-        fields = ['id','nome','telefone','observacao','IdAdvogado']
+        fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
         
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
