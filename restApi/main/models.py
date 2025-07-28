@@ -2,36 +2,54 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
 import time 
 
-
+def caminho_imagem(instance, filename):
+    return f'clientes/{filename}'
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
-    telefone = models.CharField(max_length=20, default="Sem telefone.")
+    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     sexo = models.CharField(max_length=10)
     dataNascimento = models.DateField()
     nacionalidade = models.CharField(max_length=255,default="Nenhuma nacionalidade.")
     profissao = models.CharField(max_length=255, default="Sem profissão.")
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
-    contrato = models.BooleanField(default=False)
-    motivo = models.CharField(max_length=255, default="Sem motivo.", blank=True)
-    cep = models.CharField(max_length=20, unique=True)
+    cep = models.CharField(max_length=20)
     complemento = models.CharField(max_length=255)
     rua = models.CharField(max_length=255,default="Sem rua.")
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,default="Sem cidade.")
     estado = models.CharField(max_length=255,default="Sem estado.")
+    bairro = models.CharField(max_length=255,default="Sem bairro.")
     observacoes = models.TextField(default="Nenhuma observação.")
+    foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
-    garantido que seja escrito se for False pelo validation error la no serializer.py."""
+    garantido que seja escrito se for False pelo validation error la no serializer.py.
+    #Atualização: 14/07/2025 Contrato e motivo foram removidos"""
+    
+    """Bug no retorno das fotos:16/07/2025 
+        O django não retorna a foto quando eu acesso via browser.
+    """
     
     
    
     def __str__(self):
         return f'Cliente {self.nome}'
     
-        
+    
+
+
+
+class ClienteEspera(models.Model):
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
+    observacao = models.TextField(default="Nenhuma observação.",blank=True)
+    IdAdvogado = models.IntegerField(default=0)
+    cpf = models.CharField(max_length=14, unique=True, default="Sem CPF.")
+
+
+
 
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
@@ -44,6 +62,7 @@ class Advogado(AbstractBaseUser, models.Model):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    is_online = models.BooleanField(default=False)
     def __str__(self):
         return self.nome
     

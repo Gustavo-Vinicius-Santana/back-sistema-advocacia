@@ -1,8 +1,9 @@
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer
-from .models import Cliente, Advogado, Processo, Tarefas
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer
+from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
@@ -11,6 +12,7 @@ from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 import json
 import jwt
+from rest_framework_simplejwt.views import TokenObtainPairView
 from jwt.exceptions import InvalidTokenError
 from rest_framework.response import Response
 from rest_framework import status
@@ -43,8 +45,37 @@ class TarefasViewSet(viewsets.ModelViewSet):
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
     
-        
+class ClienteEsperaViewSet(viewsets.ModelViewSet):
+    queryset = ClienteEspera.objects.all()
+    serializer_class = ClienteEsperaSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
                     
+                    
+                    
+class AdvogadosOnlineView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        advogados = Advogado.objects.filter(is_online=True)
+        serializer = AdvogadoSerializer(advogados, many=True)
+        return Response(serializer.data)
+
+
+class AdvogadoLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        user.is_online = False
+        user.save()
+        return Response({"detail": "Logout realizado com sucesso."})
+        #implementar o logout baseado no tempo do Token JWT
+
 
 
 @csrf_exempt
@@ -116,6 +147,7 @@ def resetPassword(request, token):
         return JsonResponse({'message': 'senha resetada com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
 
 
 @permission_classes([IsAuthenticated])
@@ -281,3 +313,27 @@ def advUserInfo(request):
 
 
 
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def clientesEsperaAdv(request,advogado_id):
+    if request.method == 'GET':
+        if not advogado_id:
+            return JsonResponse({'error':'O ID do advogado é obrigatório.'})
+        try:
+            clientesEsperaAdv = []
+            clientesEspera = ClienteEspera.objects.filter(IdAdvogado=advogado_id)
+            for cliente in clientesEspera:
+                cliente_data = {
+                    'id': cliente.id,
+                    'nome': cliente.nome,
+                    'telefone': cliente.telefone,
+                    'observacao': cliente.observacao,
+                    'IdAdvogado': cliente.IdAdvogado
+                }
+                clientesEsperaAdv.append(cliente_data)
+            return JsonResponse(clientesEsperaAdv, safe=False)
+        except ClienteEspera.DoesNotExist:
+            return JsonResponse({'error': 'Nenhum cliente encontrado.'}, status=404)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)        
