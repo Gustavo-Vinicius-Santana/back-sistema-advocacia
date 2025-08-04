@@ -124,14 +124,14 @@ class Advogado(AbstractBaseUser, models.Model):
 
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
-    STATUS_CHOICES = [('pendente','Pendente'),('concluido','Concluido'),('atrasado','Atrasado')]
+    STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
     status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='pendente')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
-    prazoContrato = models.DateTimeField(null=True, blank=True)
-    classificacao = models.CharField(max_length=50, blank=True)
+    CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
+    classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
     descricao = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
     #tipo = adm escolhe o tipo
