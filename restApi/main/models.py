@@ -46,7 +46,7 @@ class ClienteEspera(models.Model):
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     observacao = models.TextField(default="Nenhuma observação.",blank=True)
     IdAdvogado = models.IntegerField(default=0)
-    cpf = models.CharField(max_length=14, unique=True, default="Sem CPF.")
+    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
 
 
