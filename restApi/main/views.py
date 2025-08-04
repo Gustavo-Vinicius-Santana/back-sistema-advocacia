@@ -247,7 +247,7 @@ def tarefasAdvogadoCriador(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'})
         try:
-            tarefas = Tarefas.objects.filter(advogadoCriadorId=advogado_id)   
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)   
         except:
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:
