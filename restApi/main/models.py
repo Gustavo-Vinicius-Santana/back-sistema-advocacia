@@ -15,13 +15,13 @@ class Cliente(models.Model):
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
     cep = models.CharField(max_length=20)
-    complemento = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255,blank=True)
     rua = models.CharField(max_length=255,default="Sem rua.")
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,default="Sem cidade.")
     estado = models.CharField(max_length=255,default="Sem estado.")
     bairro = models.CharField(max_length=255,default="Sem bairro.")
-    observacoes = models.TextField(default="Nenhuma observação.")
+    observacoes = models.TextField(default="Nenhuma observação.",blank=True)
     foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
@@ -132,7 +132,7 @@ class Processo(models.Model):
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     prazoContrato = models.DateTimeField(null=True, blank=True)
     classificacao = models.CharField(max_length=50, blank=True)
-    descricao = models.TextField()
+    descricao = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
     #tipo = adm escolhe o tipo
     #grupo = adm escolhe o grupo
@@ -149,5 +149,5 @@ class Tarefas(models.Model):
     urgente = models.BooleanField(default=False)
     STATUS_CHOICES = [('pendente','Pendente'),('concluida','Concluida'),('atrasada','Atrasada')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
-    observacoes = models.TextField(default="Nenhuma observação.")
+    observacoes = models.TextField(default="Nenhuma observação.", blank=True)
         
