@@ -8,7 +8,6 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    sexo = models.CharField(max_length=10)
     dataNascimento = models.DateField()
     nacionalidade = models.CharField(max_length=255,default="Nenhuma nacionalidade.")
     profissao = models.CharField(max_length=255, default="Sem profissão.")
@@ -54,10 +53,8 @@ class ClienteEspera(models.Model):
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20)
-    sexo = models.CharField(max_length=10)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
     oab = models.CharField(max_length=20, default='Nenhuma OAB')
-    
     #Django pede essas paradas pra o login, o nome é autoexplicativo
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -99,7 +96,7 @@ class Advogado(AbstractBaseUser, models.Model):
     
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome','password','telefone','sexo']   
+    REQUIRED_FIELDS = ['nome','password','telefone',]   
     
     def __str__(self):
         return self.nome
@@ -134,9 +131,8 @@ class Processo(models.Model):
     classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
     descricao = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
-    #tipo = adm escolhe o tipo
-    #grupo = adm escolhe o grupo
     
+        
 
 class Tarefas(models.Model):
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
