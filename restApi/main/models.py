@@ -9,7 +9,6 @@ class Cliente(models.Model):
     cpf = models.CharField(max_length=14, unique=True)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     dataNascimento = models.DateField()
-    nacionalidade = models.CharField(max_length=255,default="Nenhuma nacionalidade.")
     profissao = models.CharField(max_length=255, default="Sem profissão.")
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
@@ -139,11 +138,11 @@ class Tarefas(models.Model):
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.CharField(max_length=50)
-    descricao = models.TextField() #vai se atualizar timeline
+    descricao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
-    urgente = models.BooleanField(default=False)
-    STATUS_CHOICES = [('pendente','Pendente'),('concluida','Concluida'),('atrasada','Atrasada')]
+    urgente = models.BooleanField(default=False,blank=True)
+    STATUS_CHOICES = [('em aberto','Em aberto'),('concluida','Concluida'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.", blank=True)
         
