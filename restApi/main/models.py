@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
-import time 
+
 
 def caminho_imagem(instance, filename):
     return f'clientes/{filename}'
@@ -142,7 +142,9 @@ class Tarefas(models.Model):
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
     urgente = models.BooleanField(default=False,blank=True)
-    STATUS_CHOICES = [('em aberto','Em aberto'),('concluida','Concluida'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
+    #deletadas = models.BooleanField(default=False,blank=True)
+    concluida = models.BooleanField(default=False,blank=True)
+    STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.", blank=True)
         

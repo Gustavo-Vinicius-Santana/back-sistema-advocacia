@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
 from django.conf import settings
+from django.db.models import Q
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 import json
@@ -46,16 +47,21 @@ class TarefasViewSet(viewsets.ModelViewSet):
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
     def list(self, request, *args, **kwargs):
-       hoje = timezone.localdate()
-       limite  = hoje + timedelta(days=3)
+        hoje = timezone.localdate()
+        limite  = hoje + timedelta(days=3)
        # Atualiza o status das tarefas com prazo final atrasado
-       Tarefas.objects.filter(
+        Tarefas.objects.filter(
            prazoFinal__lt=hoje).exclude(status='Concluida').update(status='Atrasada')
         # Atualiza o status das tarefas com prazo final perto do prazo
-       Tarefas.objects.filter(
+        Tarefas.objects.filter(
               prazoFinal__gte=hoje, prazoFinal__lte=limite, status='em aberto').exclude(status='concluida').update(status='Perto do Prazo'
-       )       
-       return super().list(request, *args, **kwargs) 
+        )       
+        # Atualiza o status da tarefa caso o prazo final seja alterado
+        Tarefas.objects.filter(
+            Q(status='Atrasada') | Q(status='Perto do Prazo'),
+            prazoFinal__gt=limite
+        ).exclude(status='Concluida').update(status='Em Aberto')
+        return super().list(request, *args, **kwargs) 
    
 """isso ta voltando um warning no meu console, pois estou misturando data naive(sem fuso)
 com data com fuso, o warning não impede o funcionamento, mas é bom corrigir depois."""
