@@ -77,6 +77,6 @@ class TarefasSerializer(serializers.ModelSerializer):
     prazoFinal = serializers.DateTimeField(format="%d/%m/%Y ")
     class Meta:
         model = Tarefas
-        fields = ['id','descricao','prazoFinal','status','processoOrigemId','processoOrigemNumero','advogadoCriadorId','advogadoCriadorNome','advogadoResponsavelId','advogadoResponsavelNome','clienteNome','urgente','concluida','observacoes']
+        fields = ['id','descricao','prazoFinal', 'tipoTarefa', 'status','processoOrigemId','processoOrigemNumero','advogadoCriadorId','advogadoCriadorNome','advogadoResponsavelId','advogadoResponsavelNome','clienteNome','urgente','concluida','observacoes']
         # sem dataInicio pq é auto now add
         
