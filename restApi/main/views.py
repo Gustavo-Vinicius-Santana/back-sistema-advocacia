@@ -46,23 +46,28 @@ class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
-    def list(self, request, *args, **kwargs):
+    def get_queryset(self):
         hoje = timezone.localdate()
-        limite  = hoje + timedelta(days=3)
-       # Atualiza o status das tarefas com prazo final atrasado
+        limite = hoje + timedelta(days=3)
+
+        # Atualiza status
         Tarefas.objects.filter(
-           prazoFinal__lt=hoje).exclude(status='Concluida').update(status='Atrasada')
-        # Atualiza o status das tarefas com prazo final perto do prazo
+            prazoFinal__lt=hoje
+        ).exclude(status='Concluida').update(status='Atrasada')
+
         Tarefas.objects.filter(
-              prazoFinal__gte=hoje, prazoFinal__lte=limite, status='em aberto').exclude(status='concluida').update(status='Perto do Prazo'
-        )       
-        # Atualiza o status da tarefa caso o prazo final seja alterado
+            prazoFinal__gte=hoje,
+            prazoFinal__lte=limite,
+            status='em aberto'
+        ).exclude(status='concluida').update(status='Perto do Prazo')
+
         Tarefas.objects.filter(
             Q(status='Atrasada') | Q(status='Perto do Prazo'),
             prazoFinal__gt=limite
         ).exclude(status='Concluida').update(status='Em Aberto')
-        return super().list(request, *args, **kwargs) 
-   
+
+        # Retorna somente tarefas não concluídas
+        return Tarefas.objects.filter(concluida=False)
 """isso ta voltando um warning no meu console, pois estou misturando data naive(sem fuso)
 com data com fuso, o warning não impede o funcionamento, mas é bom corrigir depois."""
 
@@ -206,7 +211,7 @@ def tarefasProcesso(request,processo_id):
         if not processo_id:
             return JsonResponse({'error': 'ID do processo obrigatório.'}, status=400)     
         try:
-            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id)    
+            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id)  
         except:
             return JsonResponse({'error': 'Processo não encontrado.'})
         
@@ -217,7 +222,9 @@ def tarefasProcesso(request,processo_id):
         
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
-    
+        
+
+
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def processosAdvogado(request,advogado_id):
