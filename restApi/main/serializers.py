@@ -74,10 +74,9 @@ class TarefasSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
     clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
-    dataInicio = serializers.DateTimeField(format="%d/%m/%Y ")
     prazoFinal = serializers.DateTimeField(format="%d/%m/%Y ")
     class Meta:
         model = Tarefas
-        fields = ['id','titulo','descricao','prazoFinal','status','processoOrigemId','processoOrigemNumero','advogadoCriadorId','advogadoCriadorNome','advogadoResponsavelId','advogadoResponsavelNome','clienteNome','urgente','concluida','observacoes']
+        fields = ['id','descricao','prazoFinal','status','processoOrigemId','processoOrigemNumero','advogadoCriadorId','advogadoCriadorNome','advogadoResponsavelId','advogadoResponsavelNome','clienteNome','urgente','concluida','observacoes']
         # sem dataInicio pq é auto now add
         
