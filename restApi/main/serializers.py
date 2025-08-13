@@ -74,7 +74,7 @@ class TarefasSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
     clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
-    prazoFinal = serializers.DateTimeField(format="%d/%m/%Y ")
+    prazoFinal = serializers.DateTimeField(input_formats=['%d/%m/%Y %H:%M'], format="%d/%m/%Y %H:%M")
     class Meta:
         model = Tarefas
         fields = ['id','descricao','prazoFinal', 'tipoTarefa', 'status','processoOrigemId','processoOrigemNumero','advogadoCriadorId','advogadoCriadorNome','advogadoResponsavelId','advogadoResponsavelNome','clienteNome','urgente','concluida','observacoes']

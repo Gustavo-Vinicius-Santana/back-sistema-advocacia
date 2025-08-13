@@ -18,7 +18,7 @@ from jwt.exceptions import InvalidTokenError
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 
 
 
@@ -48,29 +48,32 @@ class TarefasViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         hoje = timezone.localdate()
-        limite = hoje + timedelta(days=3)
+        data_limite = hoje + timedelta(days=3)
+        limite  = datetime.combine(data_limite, time.max) #23:59:59
 
-        # Atualiza status
+       # 1 - Atrasadas
         Tarefas.objects.filter(
             prazoFinal__lt=hoje
-        ).exclude(status='Concluida').update(status='Atrasada')
+        ).exclude(status='concluida').update(status='atrasada')
 
+        # 2 - Perto do prazo
         Tarefas.objects.filter(
             prazoFinal__gte=hoje,
             prazoFinal__lte=limite,
             status='em aberto'
-        ).exclude(status='concluida').update(status='Perto do Prazo')
+        ).exclude(status='concluida').update(status='perto do prazo')
 
+        # 3 - Em aberto (prazo mais longo)
         Tarefas.objects.filter(
-            Q(status='Atrasada') | Q(status='Perto do Prazo'),
+            Q(status='atrasada') | Q(status='perto do prazo'),
             prazoFinal__gt=limite
-        ).exclude(status='Concluida').update(status='Em Aberto')
+        ).exclude(status='concluida').update(status='em aberto')
 
         # Retorna somente tarefas não concluídas
         return Tarefas.objects.filter(concluida=False)
-"""isso ta voltando um warning no meu console, pois estou misturando data naive(sem fuso)
-com data com fuso, o warning não impede o funcionamento, mas é bom corrigir depois."""
-
+    
+    
+    
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
