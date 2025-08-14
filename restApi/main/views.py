@@ -49,28 +49,26 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
-        limite  = datetime.combine(data_limite, time.max) #23:59:59
+        limite = datetime.combine(data_limite, time.max)  # até 23:59:59
 
-       # 1 - Atrasadas
+        # 1 - Atrasadas (somente antes de hoje)
         Tarefas.objects.filter(
             prazoFinal__lt=hoje
         ).exclude(status='concluida').update(status='atrasada')
 
-        # 2 - Perto do prazo
+        # 2 - Perto do prazo (inclui hoje até 3 dias depois)
         Tarefas.objects.filter(
             prazoFinal__gte=hoje,
-            prazoFinal__lte=limite,
-            status='em aberto'
+            prazoFinal__lte=limite
         ).exclude(status='concluida').update(status='perto do prazo')
 
-        # 3 - Em aberto (prazo mais longo)
+        # 3 - Em aberto (prazo maior que 3 dias)
         Tarefas.objects.filter(
-            Q(status='atrasada') | Q(status='perto do prazo'),
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        # Retorna somente tarefas não concluídas
         return Tarefas.objects.filter(concluida=False)
+
     
     
     
