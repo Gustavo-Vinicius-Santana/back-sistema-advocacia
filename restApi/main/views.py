@@ -240,6 +240,37 @@ def tarefasProcesso(request,processo_id):
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt
+def tarefasConcluidasEspecificas(request,tarefa_id):
+    if request.method == 'GET':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id, status='concluida')  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
+        
+        serializer = TarefasSerializer(tarefa)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    elif request.method == 'PUT':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id, status='concluida')  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
+        serializer = TarefasSerializer(tarefa, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
 def processosAdvogado(request,advogado_id):
     if request.method == 'GET':
         if not advogado_id:
