@@ -245,7 +245,7 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
         if not tarefa_id:
             return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
         try:
-            tarefa = Tarefas.objects.get(id=tarefa_id, status='concluida')  
+            tarefa = Tarefas.objects.get(id=tarefa_id,conlcuida = True)  
         except Tarefas.DoesNotExist:
             return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
         
@@ -257,7 +257,7 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
         if not tarefa_id:
             return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
         try:
-            tarefa = Tarefas.objects.get(id=tarefa_id, status='concluida')  
+            tarefa = Tarefas.objects.get(id=tarefa_id,conlcuida = True)  
         except Tarefas.DoesNotExist:
             return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
         serializer = TarefasSerializer(tarefa, data=request.data, partial=True)
