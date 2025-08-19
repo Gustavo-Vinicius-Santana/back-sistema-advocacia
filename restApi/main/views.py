@@ -260,7 +260,11 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
             tarefa = Tarefas.objects.get(id=tarefa_id,concluida = True)  
         except Tarefas.DoesNotExist:
             return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
-        serializer = TarefasSerializer(tarefa, data=request.data, partial=True)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'}, status=400)
+        serializer = TarefasSerializer(tarefa, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data, status=200)
