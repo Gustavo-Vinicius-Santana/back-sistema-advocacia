@@ -67,7 +67,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        return Tarefas.objects.filter(concluida=False)
+        return Tarefas.objects.filter(concluida=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
     def create(self, request, *args, **kwargs):
         hoje = timezone.localdate()
         data = request.data.copy()
@@ -323,7 +323,7 @@ def tarefasAdvogadoCriador(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'})
         try:
-            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)   
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id,concluida=False)   
         except:
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:
