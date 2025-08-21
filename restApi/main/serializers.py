@@ -81,3 +81,14 @@ class TarefasSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
         
+class HistoricoTarefasSerializer(serializers.ModelSerializer):
+    tarefaId = serializers.IntegerField(source='tarefaId.id',read_only=True)
+    dataHora = serializers.DateTimeField(read_only=True)
+    acao = serializers.CharField(read_only=True)
+    
+    
+    class Meta:
+        model = Tarefas
+        fields = ['tarefaId','dataHora','acao']
+        read_only_fields = ['tarefaId','dataHora']
+        

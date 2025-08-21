@@ -148,3 +148,11 @@ class Tarefas(models.Model):
     status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.", blank=True)
         
+        
+class HistoricoTarefas(models.Model):
+    tarefaId = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
+    dataHora = models.DateTimeField(auto_now_add=True)
+    acao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
+    
+    def __str__(self):
+        return f'Histórico da Tarefa {self.tarefaId.id} - {self.dataHora}'

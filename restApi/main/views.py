@@ -2,13 +2,12 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer
-from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer
+from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
 from django.conf import settings
-from django.db.models import Q
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 import json
@@ -79,7 +78,34 @@ class TarefasViewSet(viewsets.ModelViewSet):
         
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        dados_antes = self.get_serializer(instance).data.copy()  
+        response = super().partial_update(request, *args, **kwargs)
+        instance.refresh_from_db()  # Atualiza a instância do banco de dados
+        dados_depois = self.get_serializer(instance).data.copy()
+        campos_mudados = []
+        for campo, valor_antes in dados_antes.items():
+            valor_depois = dados_depois.get(campo)
+            if valor_depois != valor_antes:
+                campos_mudados.append(campo)
+        tarefa_id = instance
+        data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if request.user.is_authenticated:
+            advogado_nome = Advogado.objects.get(id=request.user.id).nome
+        if campos_mudados:
+            historico = HistoricoTarefas.objects.create(
+                tarefaId=tarefa_id,
+                dataHora=data_Hora,
+                acao=f'{data_Hora},{advogado_nome} alterou os campos: {campos_mudados}'
+            )
+            historico.save()
+                
         
+
+        return response
+
 
     
     
@@ -114,7 +140,6 @@ class AdvogadoLogoutView(APIView):
         user.save()
         return Response({"detail": "Logout realizado com sucesso."})
         #implementar o logout baseado no tempo do Token JWT
-
 
 
 @csrf_exempt
@@ -157,7 +182,7 @@ RESOLVIDO em 03/06/2025
 
 @csrf_exempt
 def emailRequestSenha(request):
-   if request.method == 'POST':
+    if request.method == 'POST':
         data = json.loads(request.body)
         email = data.get('email')
         user = Advogado.objects.filter(email=email).first()
@@ -169,7 +194,7 @@ def emailRequestSenha(request):
         message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:8000/resetPassword/{refresh}'
         emailSender.sendMensage('Resetar Senha', message)
         return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
-   else:
+    else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
     
 
@@ -270,8 +295,62 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
             return JsonResponse(serializer.data, status=200)
         return JsonResponse(serializer.errors, status=400)
     
+    elif request.method == 'DELETE':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,concluida = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
+        tarefa.delete()
+        return JsonResponse({'message': 'Tarefa excluída com sucesso.'}, status=204)
+    
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def historicoTarefasEspecificos(request,tarefa_id):
+    if request.method == 'GET':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            historico = HistoricoTarefas.objects.filter(tarefaId=tarefa_id)  
+        except HistoricoTarefas.DoesNotExist:
+            return JsonResponse({'error': 'Histórico não encontrado.'}, status=404)
+        
+        serializer = HistoricoTarefasSerializer(historico, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    elif request.method == 'DELETE':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            historico = HistoricoTarefas.objects.filter(tarefaId=tarefa_id)  
+        except HistoricoTarefas.DoesNotExist:
+            return JsonResponse({'error': 'Histórico não encontrado.'}, status=404)
+        historico.delete()
+        return JsonResponse({'message': 'Histórico excluído com sucesso.'}, status=204)
+    
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+    
+    
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def historicoTarefas(request):
+    if request.method == 'GET':
+        historico = HistoricoTarefas.objects.all()
+        serializer = HistoricoTarefasSerializer(historico, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt
