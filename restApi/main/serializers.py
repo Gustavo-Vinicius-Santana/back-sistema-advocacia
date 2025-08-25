@@ -83,9 +83,8 @@ class TarefasSerializer(serializers.ModelSerializer):
         
 class HistoricoTarefasSerializer(serializers.ModelSerializer):
     tarefaId = serializers.IntegerField(source='tarefaId.id',read_only=True)
-    dataHora = serializers.DateTimeField(read_only=True)
+    dataHora = serializers.DateTimeField(read_only=True,format="%d/%m/%Y %H:%M")
     acao = serializers.CharField(read_only=True)
-    
     
     class Meta:
         model = Tarefas
