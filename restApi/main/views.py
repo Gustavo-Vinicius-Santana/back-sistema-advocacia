@@ -91,7 +91,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
         tarefa_id = instance
-        data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
         if request.user.is_authenticated:
             advogado_nome = Advogado.objects.get(id=request.user.id).nome
         if campos_mudados:
