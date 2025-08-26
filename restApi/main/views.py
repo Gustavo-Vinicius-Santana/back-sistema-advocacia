@@ -95,10 +95,12 @@ class TarefasViewSet(viewsets.ModelViewSet):
         if request.user.is_authenticated:
             advogado_nome = Advogado.objects.get(id=request.user.id).nome
         if campos_mudados:
+            # transforma lista em string: 'campo1','campo2','campo3'
+            campos_mudados_formatados = ",".join([f"'{campo}'" for campo in campos_mudados])
             historico = HistoricoTarefas.objects.create(
                 tarefaId=tarefa_id,
                 dataHora=data_Hora,
-                acao=f'{data_Hora},{advogado_nome} alterou os campos: {campos_mudados}'
+                acao=f'{data_Hora} - O(A) {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
             )
             historico.save()
                 
