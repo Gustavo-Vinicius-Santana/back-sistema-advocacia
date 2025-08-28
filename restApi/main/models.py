@@ -130,6 +130,7 @@ class Processo(models.Model):
     classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
     descricao = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
+    concluida = models.BooleanField(default=False)
     
         
 
