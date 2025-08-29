@@ -423,14 +423,14 @@ def advogadosDashboard(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'},status=400)
         tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
-        processosAtivos = Processo.objects.filter(advogadoCriadorId=advogado_id, status='ativo').count()
+        processosAtivos = Processo.objects.filter(advogadoCriadorId=advogado_id, status='ativo').exclude(concluido=True).count()
         
         if not tarefas.exists():
             return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'},status=400)
         
         tarefasConcluidas = tarefas.filter(concluida=True).count()
         tarefasPendentes = tarefas.filter(concluida=False).count()
-        processosConcluidos = Processo.objects.filter(advogadoCriadorId=advogado_id, concluida=True).count()
+        processosConcluidos = Processo.objects.filter(advogadoCriadorId=advogado_id, concluido=True).count()
         
         
         
