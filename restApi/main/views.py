@@ -71,6 +71,12 @@ class TarefasViewSet(viewsets.ModelViewSet):
         hoje = timezone.localdate()
         data = request.data.copy()
         data['dataInicio'] = hoje
+        prazoFinal_str = data.get('prazoFinal')
+        if prazoFinal_str < hoje.strftime('%Y-%m-%d'):
+            response = {
+                'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
+            }
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -86,6 +92,13 @@ class TarefasViewSet(viewsets.ModelViewSet):
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
         dados_depois = self.get_serializer(instance).data.copy()
         campos_mudados = []
+        #verificação do prazo final
+        prazoFinal_str = dados_depois.get('prazoFinal')
+        if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
+            response = {
+                'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
+            }
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
         for campo, valor_antes in dados_antes.items():
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
