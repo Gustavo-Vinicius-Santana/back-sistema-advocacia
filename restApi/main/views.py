@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta, datetime, time
+from dateutil.relativedelta import relativedelta
 
 
 
@@ -260,8 +261,12 @@ def processosClientes(request,cliente_id):
 def clientes65(request):
     if request.method == 'GET':
         dataAtual = timezone.now().date()
-        dataLimite =    dataAtual.replace(year=dataAtual.year - 65)  # clientes que estao a 5 dias de fazer 65 anos
-        clientes = Cliente.objects.filter(dataNascimento__lte=dataLimite)
+
+        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
+        dataInicio = dataAtual - relativedelta(years=65)               # completa 65 hoje
+        dataFim = dataAtual - relativedelta(years=65, days=-5)         # completa 65 daqui 5 dias
+
+        clientes = Cliente.objects.filter(dataNascimento__range=(dataInicio, dataFim))
         serializer = ClienteSerializer(clientes, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -435,7 +440,25 @@ def processosConcluidosEspecificos(request,processo_id):
         serializer = ProcessoSerializer(processo)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
+    
     elif request.method == 'PUT':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    elif request.method == 'PATCH':
         if not processo_id:
             return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
         try:
