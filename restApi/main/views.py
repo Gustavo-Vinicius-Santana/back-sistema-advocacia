@@ -408,6 +408,38 @@ def processosResumido(request):
     else:
         return JsonResponse({'error' : 'Método não permitido'},status = 404)
     
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosConcluidosEspecificos(request,processo_id):
+    if request.method == 'GET':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        serializer = ProcessoSerializer(processo)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    elif request.method == 'PUT':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'},status = 405)
     
 
 @permission_classes([IsAuthenticated])

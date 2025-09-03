@@ -28,6 +28,7 @@ urlpatterns = [
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
     path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'),
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
+    path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
     path('advogados/resumido/', views.advogadosResumido, name= 'advogadosResumido'),
     path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard'),
