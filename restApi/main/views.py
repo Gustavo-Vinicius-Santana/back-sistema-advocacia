@@ -255,6 +255,19 @@ def processosClientes(request,cliente_id):
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
 #O erro era no cachê   
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def clientes65(request):
+    if request.method == 'GET':
+        dataAtual = timezone.now().date()
+        dataLimite =    dataAtual.replace(year=dataAtual.year - 65)  # clientes que estao a 5 dias de fazer 65 anos
+        clientes = Cliente.objects.filter(dataNascimento__lte=dataLimite)
+        serializer = ClienteSerializer(clientes, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
 
 
 @permission_classes([IsAuthenticated])
