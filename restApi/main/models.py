@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
-import time 
+
 
 def caminho_imagem(instance, filename):
     return f'clientes/{filename}'
@@ -8,20 +8,18 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    sexo = models.CharField(max_length=10)
     dataNascimento = models.DateField()
-    nacionalidade = models.CharField(max_length=255,default="Nenhuma nacionalidade.")
     profissao = models.CharField(max_length=255, default="Sem profissão.")
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
     cep = models.CharField(max_length=20)
-    complemento = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255,blank=True)
     rua = models.CharField(max_length=255,default="Sem rua.")
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,default="Sem cidade.")
     estado = models.CharField(max_length=255,default="Sem estado.")
     bairro = models.CharField(max_length=255,default="Sem bairro.")
-    observacoes = models.TextField(default="Nenhuma observação.")
+    observacoes = models.TextField(default="Nenhuma observação.",blank=True)
     foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
@@ -46,7 +44,7 @@ class ClienteEspera(models.Model):
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     observacao = models.TextField(default="Nenhuma observação.",blank=True)
     IdAdvogado = models.IntegerField(default=0)
-    cpf = models.CharField(max_length=14, unique=True, default="Sem CPF.")
+    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
 
 
@@ -54,10 +52,8 @@ class ClienteEspera(models.Model):
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20)
-    sexo = models.CharField(max_length=10)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
     oab = models.CharField(max_length=20, default='Nenhuma OAB')
-    
     #Django pede essas paradas pra o login, o nome é autoexplicativo
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -99,7 +95,7 @@ class Advogado(AbstractBaseUser, models.Model):
     
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome','password','telefone','sexo']   
+    REQUIRED_FIELDS = ['nome','password','telefone',]   
     
     def __str__(self):
         return self.nome
@@ -124,30 +120,40 @@ class Advogado(AbstractBaseUser, models.Model):
 
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
-    STATUS_CHOICES = [('pendente','Pendente'),('concluido','Concluido'),('atrasado','Atrasado')]
+    STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
     status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='pendente')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
-    prazoContrato = models.DateTimeField(null=True, blank=True)
-    classificacao = models.CharField(max_length=50, blank=True)
-    descricao = models.TextField()
+    CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
+    classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
+    descricao = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
-    #tipo = adm escolhe o tipo
-    #grupo = adm escolhe o grupo
+    concluido = models.BooleanField(default=False)
     
+        
 
 class Tarefas(models.Model):
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.CharField(max_length=50)
-    descricao = models.TextField() #vai se atualizar timeline
+    descricao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
-    urgente = models.BooleanField(default=False)
-    STATUS_CHOICES = [('pendente','Pendente'),('concluida','Concluida'),('atrasada','Atrasada')]
-    status = models.CharField(choices=STATUS_CHOICES,max_length=50) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
-    observacoes = models.TextField(default="Nenhuma observação.")
+    urgente = models.BooleanField(default=False,blank=True)
+    #deletadas = models.BooleanField(default=False,blank=True)
+    concluida = models.BooleanField(default=False,blank=True)
+    STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
+    status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
+    observacoes = models.TextField(default="Nenhuma observação.", blank=True)
         
+        
+class HistoricoTarefas(models.Model):
+    tarefaId = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
+    dataHora = models.DateTimeField(auto_now_add=True)
+    acao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
+    
+    def __str__(self):
+        return f'Histórico da Tarefa {self.tarefaId.id} - {self.dataHora}'

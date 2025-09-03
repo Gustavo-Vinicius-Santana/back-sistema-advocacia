@@ -27,7 +27,9 @@ urlpatterns = [
     path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
     path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'),
+    path('clientes65/', views.clientes65, name='clientes65'),
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
+    path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
     path('advogados/resumido/', views.advogadosResumido, name= 'advogadosResumido'),
     path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard'),
@@ -37,8 +39,11 @@ urlpatterns = [
     path('advogados/online/', AdvogadosOnlineView.as_view(), name='advogadosOnline'),
     path('advogados/<int:advogado_id>/clientesEspera/',views.clientesEsperaAdv, name='clientesEsperaAdv'),
     path('advogados/logout/', AdvogadoLogoutView.as_view(), name='advogadosLogout'),
+    path('tarefasConcluidas/<int:tarefa_id>/', views.tarefasConcluidasEspecificas, name='tarefasConcluidasEspecificas'),
+    path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
+    path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
     path('', include(router.urls)),
-    
+    # 
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

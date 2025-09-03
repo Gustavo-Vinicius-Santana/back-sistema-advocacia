@@ -6,7 +6,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','sexo','dataNascimento','nacionalidade','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -39,12 +39,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ClienteEsperaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClienteEspera
-        fields = ['id','nome','telefone','observacao','IdAdvogado']
+        fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
         
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = ['id','nome','email','sexo','oab']
+        fields = '__all__'
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,8 +62,7 @@ class ProcesssosResumidoSerializer(serializers.ModelSerializer):
 
 class ProcessoSerializer(serializers.ModelSerializer):
     clienteNome = serializers.CharField(source='clienteId.nome',read_only=True)
-    dataContrato = serializers.DateTimeField(format="%d/%m/%Y")
-    prazoContrato = serializers.DateTimeField(format="%d/%m/%Y") 
+    dataContrato = serializers.DateTimeField()
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     class Meta:
         model = Processo
@@ -74,10 +73,21 @@ class TarefasSerializer(serializers.ModelSerializer):
     processoOrigemNumero = serializers.CharField(source='processoOrigemId.numeroProcesso',read_only=True)
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
-    dataInicio = serializers.DateTimeField(format="%d/%m/%Y ")
-    prazoFinal = serializers.DateTimeField(format="%d/%m/%Y ")
+    clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
+    prazoFinal = serializers.DateTimeField(input_formats=['%Y-%m-%d'])
+    dataInicio = serializers.DateTimeField(read_only=True)
     class Meta:
         model = Tarefas
         fields = '__all__'
         
+        
+class HistoricoTarefasSerializer(serializers.ModelSerializer):
+    tarefaId = serializers.IntegerField(source='tarefaId.id',read_only=True)
+    dataHora = serializers.DateTimeField(read_only=True,format="%Y-%m-%d %H:%M")
+    acao = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = Tarefas
+        fields = ['tarefaId','dataHora','acao']
+        read_only_fields = ['tarefaId','dataHora']
         
