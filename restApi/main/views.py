@@ -42,6 +42,12 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
+    class Meta:
+        ordering = ['-prioritario'] # Ordena por prioritario em ordem decrescente (True primeiro)
+    #maneira mais simples de ordenar pelo get.
+    
+    
+    
 class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()
     serializer_class = TarefasSerializer
