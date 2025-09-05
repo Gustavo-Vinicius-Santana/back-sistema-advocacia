@@ -42,9 +42,13 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
-    class Meta:
-        ordering = ['-prioritario'] # Ordena por prioritario em ordem decrescente (True primeiro)
-    #maneira mais simples de ordenar pelo get.
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().order_by('-prioritario')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    #com o class meta não funcionou, mas sobrescrevendo o list sim... ???
+    # vou investigar o motivo
     
     
     
