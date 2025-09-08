@@ -2,8 +2,8 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer
-from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer,DocumentosSerializer
+from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas,Documentos
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
@@ -167,6 +167,12 @@ class AdvogadoLogoutView(APIView):
         return Response({"detail": "Logout realizado com sucesso."})
         #implementar o logout baseado no tempo do Token JWT
 
+
+class DocumentosViewSet(viewsets.ModelViewSet):
+    queryset = Documentos.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = DocumentosSerializer
+    
 
 @csrf_exempt
 @action(detail=True, methods=['post'])

@@ -157,3 +157,10 @@ class HistoricoTarefas(models.Model):
     
     def __str__(self):
         return f'Histórico da Tarefa {self.tarefaId.id} - {self.dataHora}'
+    
+    
+
+class Documentos(models.Model):
+    nome = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=100)
+    documento = models.TextField()

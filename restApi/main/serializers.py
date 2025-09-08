@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera
+from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera,Documentos
 
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
@@ -91,3 +91,8 @@ class HistoricoTarefasSerializer(serializers.ModelSerializer):
         fields = ['tarefaId','dataHora','acao']
         read_only_fields = ['tarefaId','dataHora']
         
+
+class DocumentosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Documentos
+        fields = '__all__'
