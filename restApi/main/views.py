@@ -2,8 +2,8 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer,DocumentosSerializer
-from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas,Documentos
+from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer,DocumentosSerializer, ClienteSemContratoSerializer
+from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas,Documentos, ClienteSemContrato
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
@@ -29,6 +29,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     
+class ClienteSemContratoViewSet(viewsets.ModelViewSet):
+    queryset = ClienteSemContrato.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = ClienteSemContratoSerializer
         
     
 class AdvogadoViewSet(viewsets.ModelViewSet):
@@ -99,17 +103,17 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         dados_antes = self.get_serializer(instance).data.copy()  
-        response = super().partial_update(request, *args, **kwargs)
-        instance.refresh_from_db()  # Atualiza a instância do banco de dados
-        dados_depois = self.get_serializer(instance).data.copy()
-        campos_mudados = []
-        #verificação do prazo final
-        prazoFinal_str = dados_depois.get('prazoFinal')
+        prazoFinal_str = dados_antes.get('prazoFinal')
         if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
             response = {
                 'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
             }
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
+        response = super().partial_update(request, *args, **kwargs)
+        instance.refresh_from_db()  # Atualiza a instância do banco de dados
+        dados_depois = self.get_serializer(instance).data.copy()
+        campos_mudados = []
+        #verificação do prazo final
         for campo, valor_antes in dados_antes.items():
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
@@ -173,6 +177,8 @@ class DocumentosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentosSerializer
     
+    
+
 
 @csrf_exempt
 @action(detail=True, methods=['post'])
@@ -270,6 +276,21 @@ def processosClientes(request,cliente_id):
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+      
+      
+@csrf_exempt
+def processosArquivados(request):
+    if request.method == 'GET':
+        try: 
+            processos = Processo.objects.filter(status = 'arquivado')
+        except:
+            return JsonResponse({'error': 'Nenhum processo arquivado foi encontrado.'}, status=404)   
+        serializer  = ProcessoSerializer(processos, many=True)
+        data = serializer.data()
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+   
         
 #O erro era no cachê   
 @permission_classes([IsAuthenticated])

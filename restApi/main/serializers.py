@@ -41,6 +41,13 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
         model = ClienteEspera
         fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
         
+        
+class ClienteSemContratoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClienteEspera
+        fields = ['id','nome','telefone','observacao','cpf']
+        
+        
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado

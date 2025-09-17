@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import ClienteViewSet, AdvogadoViewSet, ProcessoViewSet,TarefasViewSet,AdvogadosOnlineView,CustomTokenObtainPairView,AdvogadoLogoutView
+from .views import ClienteViewSet, AdvogadoViewSet, ProcessoViewSet,AdvogadosOnlineView,CustomTokenObtainPairView,AdvogadoLogoutView,ClienteSemContratoViewSet
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
@@ -15,6 +15,7 @@ router.register(r'processos', ProcessoViewSet)
 router.register(r'tarefas', views.TarefasViewSet)
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
 router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
+router.register(r'clientesSemContrato', ClienteSemContratoViewSet,basename='clientesSemContrato')
 
 """BUG 14/07/2025: o endpoint de clientes espera os dados dos clientes ja cadastrados.
 Corrigido: em 1 hora"""
@@ -43,6 +44,7 @@ urlpatterns = [
     path('tarefasConcluidas/<int:tarefa_id>/', views.tarefasConcluidasEspecificas, name='tarefasConcluidasEspecificas'),
     path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
     path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
+    path('precessosArquivados/', views.processosArquivados, name='processosArquivados'),
     path('', include(router.urls)),
     # 
 ]

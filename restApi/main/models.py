@@ -48,6 +48,13 @@ class ClienteEspera(models.Model):
 
 
 
+class ClienteSemContrato(models.Model):
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
+    observacao = models.TextField(default="Nenhuma observação.",blank=True)
+    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+
+
 
 class Advogado(AbstractBaseUser, models.Model):
     nome = models.CharField(max_length=255)
