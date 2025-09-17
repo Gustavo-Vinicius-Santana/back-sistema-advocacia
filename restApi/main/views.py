@@ -103,7 +103,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         dados_antes = self.get_serializer(instance).data.copy()  
-        prazoFinal_str = dados_antes.get('prazoFinal')
+        prazoFinal_str = dados_depois.get('prazoFinal')
         if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
             response = {
                 'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
