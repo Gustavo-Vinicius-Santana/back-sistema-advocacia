@@ -103,41 +103,45 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         dados_antes = self.get_serializer(instance).data.copy()  
-        dados_depois = self.get_serializer(instance).data.copy()
-        prazoFinal_str = dados_depois.get('prazoFinal')
-        if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
-            response = {
-                'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
-            }
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+         # Verificação do prazo final
+        prazoFinal_str = request.data.get('prazoFinal')
+        if prazoFinal_str:
+            prazoFinal = datetime.strptime(prazoFinal_str, "%Y-%m-%d").date()
+            if prazoFinal < timezone.localdate():
+                return Response(
+                    {'error': 'A data de prazoFinal não pode ser anterior a hoje.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        # se passou na validação, salva
         response = super().partial_update(request, *args, **kwargs)
-        instance.refresh_from_db()  # Atualiza a instância do banco de dados
+        dados_depois = self.get_serializer(instance).data.copy()
+
+       
+
+        # Verifica mudanças
         campos_mudados = []
-        #verificação do prazo final
         for campo, valor_antes in dados_antes.items():
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
-        tarefa_id = instance
-        data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
+
+        instance.refresh_from_db()
+        data_Hora = timezone.now().strftime('%Y-%m-%d %H:%M')
+
+        advogado_nome = None
         if request.user.is_authenticated:
-            advogado_nome = Advogado.objects.get(id=request.user.id).nome
+            advogado_nome = getattr(request.user, "nome", request.user.get_username())
+
         if campos_mudados:
-            # transforma lista em string: 'campo1','campo2','campo3'
             campos_mudados_formatados = ", ".join([f"'{campo}'" for campo in campos_mudados])
-            historico = HistoricoTarefas.objects.create(
-                tarefaId=tarefa_id,
+            HistoricoTarefas.objects.create(
+                tarefaId=instance.id,
                 dataHora=data_Hora,
                 acao=f'{data_Hora} - {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
             )
-            historico.save()
-                
-        
 
         return response
-
-
-    
+        
     
     
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
