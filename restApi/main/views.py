@@ -103,6 +103,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         dados_antes = self.get_serializer(instance).data.copy()  
+        dados_depois = self.get_serializer(instance).data.copy()
         prazoFinal_str = dados_depois.get('prazoFinal')
         if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
             response = {
@@ -111,7 +112,6 @@ class TarefasViewSet(viewsets.ModelViewSet):
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
-        dados_depois = self.get_serializer(instance).data.copy()
         campos_mudados = []
         #verificação do prazo final
         for campo, valor_antes in dados_antes.items():
