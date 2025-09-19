@@ -51,7 +51,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
-    #com o class meta não funcionou, mas sobrescrevendo o list sim... ???
+    #usando o class meta não funcionou, mas sobrescrevendo o list, sim... ???
     # vou investigar o motivo
     
     
@@ -286,15 +286,16 @@ def processosClientes(request,cliente_id):
 @csrf_exempt
 def processosArquivados(request):
     if request.method == 'GET':
-        try: 
-            processos = Processo.objects.filter(status = 'arquivado')
-        except:
-            return JsonResponse({'error': 'Nenhum processo arquivado foi encontrado.'}, status=404)   
-        serializer  = ProcessoSerializer(processos, many=True)
-        data = serializer.data()
-        return JsonResponse(data, safe=False)
-    else:
-        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+        processos = Processo.objects.filter(status = 'arquivado')
+        
+        if not processos.exists():
+            return JsonResponse({'error': 'Nenhum processo arquivado encontrado.'}, status=404)
+        
+        serializer = ProcessoSerializer(processos, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+       
+    return JsonResponse({'error': 'Método não permitido.'}, status=405)
    
         
 #O erro era no cachê   
