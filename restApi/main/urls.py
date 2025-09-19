@@ -44,7 +44,7 @@ urlpatterns = [
     path('tarefasConcluidas/<int:tarefa_id>/', views.tarefasConcluidasEspecificas, name='tarefasConcluidasEspecificas'),
     path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
     path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
-    path('precessosArquivados/', views.processosArquivados, name='processosArquivados'),
+    path('processosArquivados/', views.processosArquivados, name='processosArquivados'),
     path('', include(router.urls)),
     # 
 ]
