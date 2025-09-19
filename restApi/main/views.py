@@ -127,7 +127,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
 
-        data_Hora = timezone.now().strftime('%Y-%m-%d %H:%M')
+        data_Hora = timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')
 
         advogado_nome = None
         if request.user.is_authenticated:
