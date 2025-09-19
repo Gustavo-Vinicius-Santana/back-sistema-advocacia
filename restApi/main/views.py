@@ -114,7 +114,9 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 )
         # se passou na validação, salva
         response = super().partial_update(request, *args, **kwargs)
+        instance.refresh_from_db()
         dados_depois = self.get_serializer(instance).data.copy()
+        
 
        
 
@@ -125,7 +127,6 @@ class TarefasViewSet(viewsets.ModelViewSet):
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
 
-        instance.refresh_from_db()
         data_Hora = timezone.now().strftime('%Y-%m-%d %H:%M')
 
         advogado_nome = None
@@ -135,7 +136,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
         if campos_mudados:
             campos_mudados_formatados = ", ".join([f"'{campo}'" for campo in campos_mudados])
             HistoricoTarefas.objects.create(
-                tarefaId=instance.id,
+                tarefaId=instance,
                 dataHora=data_Hora,
                 acao=f'{data_Hora} - {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
             )
