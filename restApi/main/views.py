@@ -2,9 +2,9 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer,DocumentosSerializer, ClienteSemContratoSerializer
-from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas,Documentos, ClienteSemContrato
+from .serializers import *
 from django.views.decorators.csrf import csrf_exempt
+from .models import *
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
 from django.conf import settings
@@ -28,11 +28,16 @@ class ClienteViewSet(viewsets.ModelViewSet):
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     
-    
-class ClienteSemContratoViewSet(viewsets.ModelViewSet):
-    queryset = ClienteSemContrato.objects.all()
+class ClienteEsperaViewSet(viewsets.ModelViewSet):
+    queryset = ClienteEspera.objects.all()
+    serializer_class = ClienteEsperaSerializer
     permission_classes = [IsAuthenticated]
-    serializer_class = ClienteSemContratoSerializer
+    
+
+class ClienteSemContratoViewSet(viewsets.ModelViewSet):
+    queryset = Cliente.objects.filter(contrato=False)
+    serializer_class = ClienteSerializer
+    permission_classes = [IsAuthenticated]    
         
     
 class AdvogadoViewSet(viewsets.ModelViewSet):
@@ -47,11 +52,11 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().order_by('-prioritario')
+        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'aberto')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
-    #usando o class meta não funcionou, mas sobrescrevendo o list, sim... ???
+    # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
     # vou investigar o motivo
     
     
@@ -103,52 +108,46 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         dados_antes = self.get_serializer(instance).data.copy()  
-         # Verificação do prazo final
-        prazoFinal_str = request.data.get('prazoFinal')
-        if prazoFinal_str:
-            prazoFinal = datetime.strptime(prazoFinal_str, "%Y-%m-%d").date()
-            if prazoFinal < timezone.localdate():
-                return Response(
-                    {'error': 'A data de prazoFinal não pode ser anterior a hoje.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        # se passou na validação, salva
         response = super().partial_update(request, *args, **kwargs)
-        instance.refresh_from_db()
+        instance.refresh_from_db()  # Atualiza a instância do banco de dados
         dados_depois = self.get_serializer(instance).data.copy()
-        
-
-       
-
-        # Verifica mudanças
         campos_mudados = []
+        #verificação do prazo final
+        prazoFinal_str = dados_depois.get('prazoFinal')
+        if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
+            response = {
+                'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
+            }
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
         for campo, valor_antes in dados_antes.items():
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
-
-        data_Hora = timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')
-
-        advogado_nome = None
+        tarefa_id = instance
+        data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
         if request.user.is_authenticated:
-            advogado_nome = getattr(request.user, "nome", request.user.get_username())
-
+            advogado_nome = Advogado.objects.get(id=request.user.id).nome
         if campos_mudados:
+            # transforma lista em string: 'campo1','campo2','campo3'
             campos_mudados_formatados = ", ".join([f"'{campo}'" for campo in campos_mudados])
-            HistoricoTarefas.objects.create(
-                tarefaId=instance,
+            historico = HistoricoTarefas.objects.create(
+                tarefaId=tarefa_id,
                 dataHora=data_Hora,
                 acao=f'{data_Hora} - {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
             )
+            historico.save()
+                
+        
 
         return response
-        
+
+
     
     
-class ClienteEsperaViewSet(viewsets.ModelViewSet):
-    queryset = ClienteEspera.objects.all()
-    serializer_class = ClienteEsperaSerializer
-    permission_classes = [IsAuthenticated]
+class DocumentosViewSet(viewsets.ModelViewSet):
+    queryset = Documentos.objects.all()
+    serializer_class = DocumentosSerializer
+    permission_classes = [IsAuthenticated]    
     
     
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -175,14 +174,6 @@ class AdvogadoLogoutView(APIView):
         user.save()
         return Response({"detail": "Logout realizado com sucesso."})
         #implementar o logout baseado no tempo do Token JWT
-
-
-class DocumentosViewSet(viewsets.ModelViewSet):
-    queryset = Documentos.objects.all()
-    permission_classes = [IsAuthenticated]
-    serializer_class = DocumentosSerializer
-    
-    
 
 
 @csrf_exempt
@@ -281,24 +272,84 @@ def processosClientes(request,cliente_id):
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
-      
-      
+        
+
+
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 def processosArquivados(request):
     if request.method == 'GET':
-        processos = Processo.objects.filter(status = 'arquivado')
-        
-        if not processos.exists():
+        processos = Processo.objects.filter(status='arquivado')
+        if processos is None:
             return JsonResponse({'error': 'Nenhum processo arquivado encontrado.'}, status=404)
-        
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
-       
-    return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
    
-        
-#O erro era no cachê   
+   
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosArquivadosEspecificos(request,processo_id):
+    if request.method == 'GET':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        serializer = ProcessoSerializer(processo)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    elif request.method == 'PUT':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    elif request.method == 'PATCH':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    elif request.method == 'DELETE':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo nao encontrado ou nao arquivado.'},status=404)
+        processo.delete()
+        return JsonResponse({'message': 'Processo excluido com sucesso'}, status=201)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'},status = 405)   
+
+
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def clientes65(request):

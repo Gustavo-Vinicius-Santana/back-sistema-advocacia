@@ -14,6 +14,7 @@ class Cliente(models.Model):
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
     cep = models.CharField(max_length=20)
     complemento = models.CharField(max_length=255,blank=True)
+    contrato = models.BooleanField(default=True)
     rua = models.CharField(max_length=255,default="Sem rua.")
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,default="Sem cidade.")
@@ -125,10 +126,11 @@ class Advogado(AbstractBaseUser, models.Model):
         extra_fields.setdefault('is_superuser', True)
         return cls.create_user(email, password, **extra_fields)
 
+
 class Processo(models.Model):
     numeroProcesso = models.CharField(max_length=50, unique=True)
     STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
-    status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='pendente')
+    status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='ativo')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
