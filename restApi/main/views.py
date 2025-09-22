@@ -34,11 +34,7 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
 
-class ClienteSemContratoViewSet(viewsets.ModelViewSet):
-    queryset = Cliente.objects.filter(contrato=False)
-    serializer_class = ClienteSerializer
-    permission_classes = [IsAuthenticated]    
-        
+
     
 class AdvogadoViewSet(viewsets.ModelViewSet):
     queryset = Advogado.objects.all()
@@ -52,7 +48,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'aberto')
+        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     

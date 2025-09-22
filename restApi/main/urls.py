@@ -15,7 +15,6 @@ router.register(r'processos', views.ProcessoViewSet)
 router.register(r'tarefas', views.TarefasViewSet)
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
 router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
-router.register(r'clienteSemContrato', views.ClienteSemContratoViewSet,basename='clientesSemContrato')
 
 """BUG 14/07/2025: o endpoint de clientes espera os dados dos clientes ja cadastrados.
 Corrigido: em 1 hora"""
