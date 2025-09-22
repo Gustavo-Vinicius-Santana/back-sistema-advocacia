@@ -45,6 +45,7 @@ urlpatterns = [
     path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
     path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
     path('processosArquivados/', views.processosArquivados, name='processosArquivados'),
+    path('processosArquivados/<int:processo_id>/', views.processosArquivadosEspecificos, name='processosArquivadosEspecificos'),
     path('', include(router.urls)),
     # 
 ]
