@@ -28,6 +28,7 @@ urlpatterns = [
     path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
     path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'),
+    path('clienteSemContratos/', views.clienteSemContratos, name='clientesArquivados'),
     path('clientes65/', views.clientes65, name='clientes65'),
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
     path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),

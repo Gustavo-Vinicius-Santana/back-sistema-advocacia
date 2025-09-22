@@ -28,6 +28,11 @@ class ClienteViewSet(viewsets.ModelViewSet):
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().filter(contrato=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
@@ -357,6 +362,19 @@ def clientes65(request):
         dataFim = dataAtual - relativedelta(years=65, days=-5)         # completa 65 daqui 5 dias
 
         clientes = Cliente.objects.filter(dataNascimento__range=(dataInicio, dataFim))
+        serializer = ClienteSerializer(clientes, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+
+@permission_classes
+@csrf_exempt
+def clientesSemContrato(request):
+    if request.method == 'GET':
+        clientes = Cliente.objects.filter(contrato = False)
         serializer = ClienteSerializer(clientes, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
