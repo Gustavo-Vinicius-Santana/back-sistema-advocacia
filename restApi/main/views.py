@@ -370,7 +370,7 @@ def clientes65(request):
 
 
 
-@permission_classes
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 def clientesSemContrato(request):
     if request.method == 'GET':
