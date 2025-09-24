@@ -6,7 +6,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
