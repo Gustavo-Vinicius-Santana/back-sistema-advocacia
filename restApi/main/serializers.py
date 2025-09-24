@@ -6,7 +6,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -18,12 +18,12 @@ class ClienteSerializer(serializers.ModelSerializer):
             'complemento':obj.complemento,
             }
         return endereco
-    def validate(self,data):
+    """def validate(self,data):
         contrato = data.get('contrato')
         motivo = data.get('motivo')
         if contrato == False and(not motivo or motivo.strip() == "Sem motivo."):
             raise serializers.ValidationError({"motivo": "Se o contrato for False, o motivo deve ser preenchido."})
-        return data
+        return data"""
     
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

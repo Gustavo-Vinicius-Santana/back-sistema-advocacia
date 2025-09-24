@@ -15,6 +15,7 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
+    motivo = models.TextField(default="Sem motivo.")
     rua = models.CharField(max_length=255,default="Sem rua.")
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,default="Sem cidade.")
