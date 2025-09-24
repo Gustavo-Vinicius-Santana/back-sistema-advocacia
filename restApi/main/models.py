@@ -7,12 +7,12 @@ def caminho_imagem(instance, filename):
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
-    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    dataNascimento = models.DateField()
+    telefone = models.CharField(max_length=20, unique=True)
+    dataNascimento = models.DateField(blank=True, null=True)
     profissao = models.CharField(max_length=255, default="Sem profissão.")
     parceiro = models.CharField(max_length=255, default="Sem parceiro.")
     inss = models.CharField(max_length=255,default="Nenhuma senha.")
-    cep = models.CharField(max_length=20)
+    cep = models.CharField(max_length=20,default="Sem CEP.")
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
     motivo = models.TextField(default="Sem motivo.")
@@ -107,6 +107,7 @@ class Advogado(AbstractBaseUser, models.Model):
     REQUIRED_FIELDS = ['nome','password','telefone',]   
     
     def __str__(self):
+        
         return self.nome
     def save(self, *args, **kwargs):
         if not self.pk:
