@@ -87,7 +87,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        return Tarefas.objects.filter(concluida=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
+        return Tarefas.objects.filter(concluida=False,deletada=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
     def create(self, request, *args, **kwargs):
         hoje = timezone.localdate()
         data = request.data.copy()
@@ -402,6 +402,57 @@ def tarefasProcesso(request,processo_id):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasDeletadas(request):
+    if request.method == 'GET':
+        tarefas = Tarefas.objects.filter(deletada=True)
+        if tarefas is None:
+            return JsonResponse({'error': 'Nenhuma tarefa deletada encontrada.'}, status=404)
+        serializer = TarefasSerializer(tarefas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasDeletadasEspecificas(request,tarefa_id):
+    if request.method == 'GET':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,deletada = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        
+        serializer = TarefasSerializer(tarefa)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    elif request.method == 'PATCH':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,deletada = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'}, status=400)
+        serializer = TarefasSerializer(tarefa, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 
 @permission_classes([IsAuthenticated])
