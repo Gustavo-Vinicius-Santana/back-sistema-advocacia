@@ -48,7 +48,7 @@ class ClienteEspera(models.Model):
     IdAdvogado = models.IntegerField(default=0)
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
-
+#Comentando para teste de commit 
 
 class ClienteSemContrato(models.Model):
     nome = models.CharField(max_length=255)
