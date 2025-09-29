@@ -451,8 +451,18 @@ def tarefasDeletadasEspecificas(request,tarefa_id):
             serializer.save()
             return JsonResponse(serializer.data, status=200)
         return JsonResponse(serializer.errors, status=400)
+    elif request.method == 'DELETE':
+        if not tarefa_id:
+            return JsonResponse({'error':'Tarefa não encontrada ou nao deletada.'}, status=400)
+        try: 
+            tarefas = Tarefas.objects.get(id=tarefa_id,deletada = True)
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        tarefas.delete()
+        return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=200)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
 
 
 @permission_classes([IsAuthenticated])
@@ -495,8 +505,7 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
         except Tarefas.DoesNotExist:
             return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
         tarefa.delete()
-        return JsonResponse({'message': 'Tarefa excluída com sucesso.'}, status=204)
-    
+        return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=204)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
