@@ -40,6 +40,12 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
     
 
 
+def get_id_from_token(token):
+    token_format = token.split(' ')[1]
+    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
+
+
     
 class AdvogadoViewSet(viewsets.ModelViewSet):
     queryset = Advogado.objects.all()
@@ -108,6 +114,18 @@ class TarefasViewSet(viewsets.ModelViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        token = request.headers.get('Authorization')
+
+        if not token:
+            return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token_format = token.split(' ')[1]
+        except IndexError:
+            return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+        advogado_id = payload.get('user_id')
+        advogado = Advogado.objects.get(id=advogado_id)
         dados_antes = self.get_serializer(instance).data.copy()  
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
@@ -124,10 +142,15 @@ class TarefasViewSet(viewsets.ModelViewSet):
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
+                if campo == 'deletada':
+                    if valor_depois == True:
+                        instance.deletadaPor = advogado.nome
+                        instance.save()
+                
         tarefa_id = instance
         data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
         if request.user.is_authenticated:
-            advogado_nome = Advogado.objects.get(id=request.user.id).nome
+            advogado_nome = advogado.nome
         if campos_mudados:
             # transforma lista em string: 'campo1','campo2','campo3'
             campos_mudados_formatados = ", ".join([f"'{campo}'" for campo in campos_mudados])
@@ -390,7 +413,7 @@ def tarefasProcesso(request,processo_id):
         if not processo_id:
             return JsonResponse({'error': 'ID do processo obrigatório.'}, status=400)     
         try:
-            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id)  
+            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id,deletada=False)  
         except:
             return JsonResponse({'error': 'Processo não encontrado.'})
         
@@ -653,7 +676,7 @@ def tarefasAdvogadoCriador(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'})
         try:
-            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id,concluida=False)   
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id,concluida=False,deletada = False)   
         except:
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:

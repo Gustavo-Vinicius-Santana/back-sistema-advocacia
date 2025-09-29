@@ -157,6 +157,7 @@ class Tarefas(models.Model):
     #deletadas = models.BooleanField(default=False,blank=True)
     concluida = models.BooleanField(default=False,blank=True)
     deletada = models.BooleanField(default=False)
+    deletadaPor = models.CharField(max_length=255, default="Ninguem", blank=True)
     STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.", blank=True)
