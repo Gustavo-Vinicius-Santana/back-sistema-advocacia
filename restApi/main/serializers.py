@@ -1,12 +1,12 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera
+from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera,Documentos
 
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -18,12 +18,12 @@ class ClienteSerializer(serializers.ModelSerializer):
             'complemento':obj.complemento,
             }
         return endereco
-    def validate(self,data):
+    """def validate(self,data):
         contrato = data.get('contrato')
         motivo = data.get('motivo')
         if contrato == False and(not motivo or motivo.strip() == "Sem motivo."):
             raise serializers.ValidationError({"motivo": "Se o contrato for False, o motivo deve ser preenchido."})
-        return data
+        return data"""
     
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -40,6 +40,13 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClienteEspera
         fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
+        
+        
+class ClienteSemContratoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClienteEspera
+        fields = ['id','nome','telefone','observacao','cpf']
+        
         
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,3 +98,8 @@ class HistoricoTarefasSerializer(serializers.ModelSerializer):
         fields = ['tarefaId','dataHora','acao']
         read_only_fields = ['tarefaId','dataHora']
         
+
+class DocumentosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Documentos
+        fields = '__all__'

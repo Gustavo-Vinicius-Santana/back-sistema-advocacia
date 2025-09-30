@@ -2,9 +2,9 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import ClienteSerializer, AdvogadoSerializer, ProcessoSerializer,TarefasSerializer,AdvogadoResumidoSerializer,ProcesssosResumidoSerializer,CustomTokenObtainPairSerializer,ClienteEsperaSerializer,HistoricoTarefasSerializer
-from .models import Cliente, Advogado, Processo, Tarefas,ClienteEspera,HistoricoTarefas
+from .serializers import *
 from django.views.decorators.csrf import csrf_exempt
+from .models import *
 from rest_framework.decorators import action, permission_classes,api_view
 from django.http import JsonResponse
 from django.conf import settings
@@ -28,8 +28,24 @@ class ClienteViewSet(viewsets.ModelViewSet):
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().filter(contrato=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
     
-        
+class ClienteEsperaViewSet(viewsets.ModelViewSet):
+    queryset = ClienteEspera.objects.all()
+    serializer_class = ClienteEsperaSerializer
+    permission_classes = [IsAuthenticated]
+    
+
+
+def get_id_from_token(token):
+    token_format = token.split(' ')[1]
+    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
+
+
     
 class AdvogadoViewSet(viewsets.ModelViewSet):
     queryset = Advogado.objects.all()
@@ -42,9 +58,13 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
     
-    class Meta:
-        ordering = ['-prioritario'] # Ordena por prioritario em ordem decrescente (True primeiro)
-    #maneira mais simples de ordenar pelo get.
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
+    # vou investigar o motivo
     
     
     
@@ -73,7 +93,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        return Tarefas.objects.filter(concluida=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
+        return Tarefas.objects.filter(concluida=False,deletada=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
     def create(self, request, *args, **kwargs):
         hoje = timezone.localdate()
         data = request.data.copy()
@@ -94,6 +114,18 @@ class TarefasViewSet(viewsets.ModelViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        token = request.headers.get('Authorization')
+
+        if not token:
+            return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token_format = token.split(' ')[1]
+        except IndexError:
+            return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+        advogado_id = payload.get('user_id')
+        advogado = Advogado.objects.get(id=advogado_id)
         dados_antes = self.get_serializer(instance).data.copy()  
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
@@ -110,10 +142,15 @@ class TarefasViewSet(viewsets.ModelViewSet):
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
                 campos_mudados.append(campo)
+                if campo == 'deletada':
+                    if valor_depois == True:
+                        instance.deletadaPor = advogado.nome
+                        instance.save()
+                
         tarefa_id = instance
         data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
         if request.user.is_authenticated:
-            advogado_nome = Advogado.objects.get(id=request.user.id).nome
+            advogado_nome = advogado.nome
         if campos_mudados:
             # transforma lista em string: 'campo1','campo2','campo3'
             campos_mudados_formatados = ", ".join([f"'{campo}'" for campo in campos_mudados])
@@ -131,11 +168,10 @@ class TarefasViewSet(viewsets.ModelViewSet):
 
     
     
-    
-class ClienteEsperaViewSet(viewsets.ModelViewSet):
-    queryset = ClienteEspera.objects.all()
-    serializer_class = ClienteEsperaSerializer
-    permission_classes = [IsAuthenticated]
+class DocumentosViewSet(viewsets.ModelViewSet):
+    queryset = Documentos.objects.all()
+    serializer_class = DocumentosSerializer
+    permission_classes = [IsAuthenticated]    
     
     
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -261,7 +297,83 @@ def processosClientes(request,cliente_id):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
-#O erro era no cachê   
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosArquivados(request):
+    if request.method == 'GET':
+        processos = Processo.objects.filter(status='arquivado')
+        if processos is None:
+            return JsonResponse({'error': 'Nenhum processo arquivado encontrado.'}, status=404)
+        serializer = ProcessoSerializer(processos, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+   
+   
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosArquivadosEspecificos(request,processo_id):
+    if request.method == 'GET':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        serializer = ProcessoSerializer(processo)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    elif request.method == 'PUT':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    elif request.method == 'PATCH':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    elif request.method == 'DELETE':
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo nao encontrado ou nao arquivado.'},status=404)
+        processo.delete()
+        return JsonResponse({'message': 'Processo excluido com sucesso'}, status=201)
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'},status = 405)   
+
+
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def clientes65(request):
@@ -283,12 +395,25 @@ def clientes65(request):
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt
+def clientesSemContrato(request):
+    if request.method == 'GET':
+        clientes = Cliente.objects.filter(contrato = False)
+        serializer = ClienteSerializer(clientes, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
 def tarefasProcesso(request,processo_id):
     if request.method == 'GET':
         if not processo_id:
             return JsonResponse({'error': 'ID do processo obrigatório.'}, status=400)     
         try:
-            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id)  
+            tarefas = Tarefas.objects.filter(processoOrigemId=processo_id,deletada=False)  
         except:
             return JsonResponse({'error': 'Processo não encontrado.'})
         
@@ -300,6 +425,67 @@ def tarefasProcesso(request,processo_id):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasDeletadas(request):
+    if request.method == 'GET':
+        tarefas = Tarefas.objects.filter(deletada=True)
+        if tarefas is None:
+            return JsonResponse({'error': 'Nenhuma tarefa deletada encontrada.'}, status=404)
+        serializer = TarefasSerializer(tarefas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+
+
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def tarefasDeletadasEspecificas(request,tarefa_id):
+    if request.method == 'GET':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,deletada = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        
+        serializer = TarefasSerializer(tarefa)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    elif request.method == 'PATCH':
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,deletada = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'}, status=400)
+        serializer = TarefasSerializer(tarefa, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    elif request.method == 'DELETE':
+        if not tarefa_id:
+            return JsonResponse({'error':'Tarefa não encontrada ou nao deletada.'}, status=400)
+        try: 
+            tarefas = Tarefas.objects.get(id=tarefa_id,deletada = True)
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa não encontrada ou nao deletada.'}, status=404)
+        tarefas.delete()
+        return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=200)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
 
 
 @permission_classes([IsAuthenticated])
@@ -342,8 +528,7 @@ def tarefasConcluidasEspecificas(request,tarefa_id):
         except Tarefas.DoesNotExist:
             return JsonResponse({'error': 'Tarefa não encontrada ou não concluída.'}, status=404)
         tarefa.delete()
-        return JsonResponse({'message': 'Tarefa excluída com sucesso.'}, status=204)
-    
+        return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=204)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
@@ -491,7 +676,7 @@ def tarefasAdvogadoCriador(request,advogado_id):
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'})
         try:
-            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id,concluida=False)   
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id,concluida=False,deletada = False)   
         except:
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:
