@@ -32,6 +32,12 @@ class ClienteViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(contrato=True)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class RepresentanteViewSet(viewsets.ModelViewSet):
+    queryset = Representante.objects.all()
+    serializer_class = RepresentanteSerializer
+    permission_classes = [IsAuthenticated]
     
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()

@@ -1,12 +1,12 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera,Documentos
-
+from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    representanteNome = serializers.CharField(source='representante.nome',read_only=True)
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','representante','representanteNome','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -25,6 +25,22 @@ class ClienteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"motivo": "Se o contrato for False, o motivo deve ser preenchido."})
         return data"""
     
+
+class RepresentanteSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    class Meta:
+        model = Representante
+        fields = ['id','nome','cpf','telefone','rua','numero','cidade','estado','bairro','endereco']
+    def get_endereco(self,obj):
+        endereco = {
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            }
+        return endereco
+        
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

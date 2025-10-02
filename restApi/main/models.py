@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
 
 
 def caminho_imagem(instance, filename):
@@ -15,6 +15,7 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
+    representante = models.ForeignKey('Representante', on_delete=models.SET_NULL, null=True, blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
@@ -38,7 +39,15 @@ class Cliente(models.Model):
         return f'Cliente {self.nome}'
     
     
-
+class Representante(models.Model):
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
+    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+    rua = models.CharField(max_length=255,blank=True)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,blank=True)
+    estado = models.CharField(max_length=255,blank=True)
+    bairro = models.CharField(max_length=255,blank=True)
 
 
 class ClienteEspera(models.Model):
@@ -58,7 +67,7 @@ class ClienteSemContrato(models.Model):
 
 
 
-class Advogado(AbstractBaseUser, models.Model):
+class Advogado(AbstractBaseUser, PermissionsMixin):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
@@ -104,15 +113,12 @@ class Advogado(AbstractBaseUser, models.Model):
     
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome','password','telefone',]   
+    REQUIRED_FIELDS = ['nome','telefone']   
     
     def __str__(self):
         
         return self.nome
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.password = 'user'
-        super(Advogado, self).save(*args, **kwargs)
+   
     
     def get_by_natural_key(self, email):
         return self.get(email=email)
