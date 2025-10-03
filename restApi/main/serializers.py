@@ -28,9 +28,10 @@ class ClienteSerializer(serializers.ModelSerializer):
 
 class RepresentanteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    cliente_id = serializers.PrimaryKeyRelatedField(many=True, read_only=True,source='cliente_set')
     class Meta:
         model = Representante
-        fields = ['id','nome','cpf','telefone','rua','numero','cidade','estado','bairro','endereco']
+        fields = ['id','nome','cliente_id','cpf','telefone','rua','numero','cidade','estado','bairro','endereco']
     def get_endereco(self,obj):
         endereco = {
             'numero':obj.numero,
