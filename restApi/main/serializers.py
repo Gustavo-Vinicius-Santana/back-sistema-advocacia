@@ -42,6 +42,38 @@ class RepresentanteSerializer(serializers.ModelSerializer):
             }
         return endereco
         
+        
+        
+class ParceiroSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    class Meta:
+        model = Parceiro
+        fields = '__all__'
+        
+    def get_endereco(self,obj):
+        endereco = {
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            }
+        return endereco
+
+class EscritorioSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    class Meta:
+        model = Escritorio
+        fields = '__all__'
+    def get_endereco(self,obj):
+        endereco = {
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            }
+        return endereco
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

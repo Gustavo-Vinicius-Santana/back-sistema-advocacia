@@ -40,7 +40,6 @@ class Cliente(models.Model):
     
     
 class Representante(models.Model):
-    
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
@@ -66,6 +65,25 @@ class ClienteSemContrato(models.Model):
     observacao = models.TextField(blank=True)
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
+
+class Parceiros(models.Model):
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
+    cpf = models.CharField(max_length=18, default="Sem CNPJ.",unique=True)
+    rua = models.CharField(max_length=255,blank=True)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,blank=True)
+    estado = models.CharField(max_length=255,blank=True)
+    bairro = models.CharField(max_length=255,blank=True)
+    observacoes = models.TextField(blank=True)
+    
+    
+class Escritorios(models.Model):
+    nome = models.CharField(max_length=255)
+    rua = models.CharField(max_length=255,blank=True)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,blank=True)
+    bairro = models.CharField(max_length=255,blank=True)
 
 
 class Advogado(AbstractBaseUser, PermissionsMixin):

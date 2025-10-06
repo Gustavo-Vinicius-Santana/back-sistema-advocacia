@@ -43,7 +43,18 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
     permission_classes = [IsAuthenticated]
+  
+  
+class ParceirosViewSet(viewsets.ModelViewSet):
+    queryset = Parceiros.objects.all()
+    serializer_class = ParceiroSerializer
+    permission_classes = [IsAuthenticated]
     
+
+class EscritoriosViewSet(viewsets.ModelViewSet):
+    queryset = Escritorios.objects.all()
+    serializer_class = EscritorioSerializer
+    permission_classes = [IsAuthenticated]  
 
 
 def get_id_from_token(token):
