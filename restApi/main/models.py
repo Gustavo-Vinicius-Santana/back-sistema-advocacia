@@ -10,7 +10,7 @@ class Cliente(models.Model):
     telefone = models.CharField(max_length=20, unique=True)
     dataNascimento = models.DateField(blank=True, null=True)
     profissao = models.CharField(max_length=255,blank=True)
-    parceiro = models.CharField(max_length=255,blank=True) 
+    parceiros = models.CharField(max_length=255,blank=True) 
     inss = models.CharField(max_length=255,blank=True)
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
