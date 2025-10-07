@@ -47,7 +47,7 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
   
 class ParceirosViewSet(viewsets.ModelViewSet):
     queryset = Parceiros.objects.all()
-    serializer_class = ParceiroSerializer
+    serializer_class = ParceirosSerializer
     permission_classes = [IsAuthenticated]
     
 

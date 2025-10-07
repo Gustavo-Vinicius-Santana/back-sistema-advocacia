@@ -6,7 +6,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     representanteNome = serializers.CharField(source='representante.nome',read_only=True)
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','representante','representanteNome','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
+        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','representante','representanteNome','parceiros','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -44,10 +44,10 @@ class RepresentanteSerializer(serializers.ModelSerializer):
         
         
         
-class ParceiroSerializer(serializers.ModelSerializer):
+class ParceirosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
-        model = Parceiro
+        model = Parceiros
         fields = '__all__'
         
     def get_endereco(self,obj):
