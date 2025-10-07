@@ -53,7 +53,7 @@ class ParceirosViewSet(viewsets.ModelViewSet):
 
 class EscritoriosViewSet(viewsets.ModelViewSet):
     queryset = Escritorios.objects.all()
-    serializer_class = EscritorioSerializer
+    serializer_class = EscritoriosSerializer
     permission_classes = [IsAuthenticated]  
 
 

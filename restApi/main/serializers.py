@@ -60,10 +60,10 @@ class ParceirosSerializer(serializers.ModelSerializer):
             }
         return endereco
 
-class EscritorioSerializer(serializers.ModelSerializer):
+class EscritoriosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
-        model = Escritorio
+        model = Escritorios
         fields = '__all__'
     def get_endereco(self,obj):
         endereco = {
