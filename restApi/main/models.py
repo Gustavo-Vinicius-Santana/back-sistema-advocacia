@@ -43,17 +43,20 @@ class Representante(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+    cep = models.CharField(max_length=10,blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,blank=True)
     estado = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
+    complemento = models.CharField(max_length=255,blank=True)
+    observacoes = models.TextField(blank=True)
 
 
 class ClienteEspera(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    observacao = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
     IdAdvogado = models.IntegerField(default=0)
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 

@@ -57,14 +57,16 @@ class RepresentanteSerializer(serializers.ModelSerializer):
     cliente_id = serializers.PrimaryKeyRelatedField(many=True, read_only=True,source='cliente_set')
     class Meta:
         model = Representante
-        fields = ['id','nome','cliente_id','cpf','telefone','rua','numero','cidade','estado','bairro','endereco']
+        fields = ['id','nome','cliente_id','cpf', 'cep', 'telefone','rua','numero','cidade','estado','bairro','endereco', 'complemento', 'observacoes']
     def get_endereco(self,obj):
         endereco = {
+            'cep':obj.cep,
             'numero':obj.numero,
             'rua':obj.rua,
             'estado':obj.estado,
             'bairro':obj.bairro,
             'cidade':obj.cidade,
+            'complemento':obj.complemento
             }
         return endereco
         
@@ -114,7 +116,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ClienteEsperaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClienteEspera
-        fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
+        fields = ['id','nome','telefone','observacoes','IdAdvogado','cpf']
         
         
 class ClienteSemContratoSerializer(serializers.ModelSerializer):
