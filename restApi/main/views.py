@@ -776,7 +776,7 @@ def clientesEsperaAdv(request,advogado_id):
                     'id': cliente.id,
                     'nome': cliente.nome,
                     'telefone': cliente.telefone,
-                    'observacao': cliente.observacao,
+                    'observacoes': cliente.observacoes,
                     'IdAdvogado': cliente.IdAdvogado,
                     'cpf': cliente.cpf
                 }
