@@ -20,12 +20,6 @@ class ClienteSerializer(serializers.ModelSerializer):
             'parceiro',
             'inss',
             'cep',
-            'numero',
-            'rua',
-            'estado',
-            'bairro',
-            'cidade',
-            'complemento',
             'endereco',
             'observacoes',
             'foto',
@@ -57,7 +51,14 @@ class RepresentanteSerializer(serializers.ModelSerializer):
     cliente_id = serializers.PrimaryKeyRelatedField(many=True, read_only=True,source='cliente_set')
     class Meta:
         model = Representante
-        fields = ['id','nome','cliente_id','cpf', 'cep', 'telefone','rua','numero','cidade','estado','bairro','endereco', 'complemento', 'observacoes']
+        fields = [
+            'id',
+            'nome',
+            'cliente_id',
+            'endereco', 
+            'observacoes'
+            ]
+
     def get_endereco(self,obj):
         endereco = {
             'cep':obj.cep,
@@ -76,7 +77,14 @@ class ParceirosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Parceiros
-        fields = '__all__'
+        fields = [
+            'id',
+            'nome',
+            'telefone',
+            'cpf',
+            'observacoes',
+            'endereco'
+            ]
         
     def get_endereco(self,obj):
         endereco = {
@@ -92,7 +100,7 @@ class EscritoriosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Escritorios
-        fields = '__all__'
+        fields = ['id','nome','endereco']
     def get_endereco(self,obj):
         endereco = {
             'numero':obj.numero,
@@ -121,7 +129,7 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
         
 class ClienteSemContratoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ClienteEspera
+        model = ClienteSemContrato
         fields = ['id','nome','telefone','observacao','cpf']
         
         
