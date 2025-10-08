@@ -17,7 +17,7 @@ class ClienteSerializer(serializers.ModelSerializer):
             'profissao',
             'representante',
             'representanteNome',
-            'parceiros',
+            'parceiro',
             'inss',
             'cep',
             'numero',
