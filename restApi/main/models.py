@@ -41,8 +41,8 @@ class Cliente(models.Model):
     
 class Representante(models.Model):
     nome = models.CharField(max_length=255)
-    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+    telefone = models.CharField(max_length=20,unique=True, blank = True)
+    cpf = models.CharField(max_length=14,unique=True, blank = True)
     cep = models.CharField(max_length=10,blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
