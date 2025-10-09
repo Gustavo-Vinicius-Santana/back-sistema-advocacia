@@ -8,24 +8,7 @@ class ClienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cliente
-        fields = [
-            'id',
-            'nome',
-            'cpf',
-            'telefone',
-            'dataNascimento',
-            'profissao',
-            'representante',
-            'representanteNome',
-            'parceiro',
-            'inss',
-            'cep',
-            'endereco',
-            'observacoes',
-            'foto',
-            'contrato',
-            'motivo',
-        ]
+        fields = '__all__'
 
     def get_endereco(self, obj):
         endereco = {
@@ -51,13 +34,7 @@ class RepresentanteSerializer(serializers.ModelSerializer):
     cliente_id = serializers.PrimaryKeyRelatedField(many=True, read_only=True,source='cliente_set')
     class Meta:
         model = Representante
-        fields = [
-            'id',
-            'nome',
-            'cliente_id',
-            'endereco', 
-            'observacoes'
-            ]
+        fields = '__all__'
 
     def get_endereco(self,obj):
         endereco = {
@@ -77,14 +54,7 @@ class ParceirosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Parceiros
-        fields = [
-            'id',
-            'nome',
-            'telefone',
-            'cpf',
-            'observacoes',
-            'endereco'
-            ]
+        fields = '__all__'
         
     def get_endereco(self,obj):
         endereco = {
@@ -100,7 +70,7 @@ class EscritoriosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     class Meta:
         model = Escritorios
-        fields = ['id','nome','endereco']
+        fields = '__all__'
     def get_endereco(self,obj):
         endereco = {
             'numero':obj.numero,
