@@ -81,6 +81,7 @@ class EscritoriosSerializer(serializers.ModelSerializer):
             'numero':obj.numero,
             'rua':obj.rua,
             'estado':obj.estado,
+            'complemento':obj.complemento,
             'bairro':obj.bairro,
             'cidade':obj.cidade,
             }
@@ -111,7 +112,7 @@ class ClienteSemContratoSerializer(serializers.ModelSerializer):
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = '__all__'
+        fields = ['id','nome','telefone','email','oab','is_active','is_staff','is_superuser','is_online','last_login']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:

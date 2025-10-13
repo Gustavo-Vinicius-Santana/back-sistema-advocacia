@@ -71,6 +71,7 @@ class ClienteSemContrato(models.Model):
 
 class Parceiros(models.Model):
     nome = models.CharField(max_length=255)
+    email = models.EmailField(default='nenhum@provedor.com', unique=True)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
     cpf = models.CharField(max_length=18, default="Sem CNPJ.",unique=True)
     rua = models.CharField(max_length=255,blank=True)
@@ -85,6 +86,9 @@ class Escritorios(models.Model):
     nome = models.CharField(max_length=255)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
+    estado = models.CharField(max_length=255,blank=True)
+    complemento = models.CharField(max_length=255,blank=True)
+    cep = models.CharField(max_length=20,blank=True)
     cidade = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
 
@@ -147,14 +151,14 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
     
     
 
-    @classmethod
-    def create_superuser(cls, email, password=None, **extra_fields):
-        """
-        Cria e retorna um superadvogado com privilégios de admin.
-        """
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        return cls.create_user(email, password, **extra_fields)
+    # @classmethod
+    # def create_superuser(cls, email, password=None, **extra_fields):
+    #     """
+    #     Cria e retorna um superadvogado com privilégios de admin.
+    #     """
+    #     extra_fields.setdefault('is_staff', True)
+    #     extra_fields.setdefault('is_superuser', True)
+    #     return cls.create_user(email, password, **extra_fields)
 
 
 class Processo(models.Model):
