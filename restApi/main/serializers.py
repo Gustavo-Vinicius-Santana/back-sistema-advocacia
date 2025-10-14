@@ -31,7 +31,7 @@ class ClienteSerializer(serializers.ModelSerializer):
 
 class RepresentanteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
-    cliente_info = serializers.SerializerMethodField(method_name='get_clientes')
+    cliente_info = serializers.SerializerMethodField(method_name='get_clientes_info')
     class Meta:
         model = Representante
         fields = '__all__'
@@ -48,7 +48,7 @@ class RepresentanteSerializer(serializers.ModelSerializer):
             }
         return endereco
     
-    def get_clientes(self,obj):
+    def get_clientes_info(self,obj):
         if obj.cliente:
             return {
                 'id': obj.cliente.id,
