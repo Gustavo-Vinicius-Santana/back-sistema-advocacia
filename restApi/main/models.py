@@ -15,7 +15,6 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
-    representante = models.ForeignKey('Representante', on_delete=models.SET_NULL, null=True, blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
