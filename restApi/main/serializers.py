@@ -49,10 +49,10 @@ class RepresentanteSerializer(serializers.ModelSerializer):
         return endereco
     
     def get_clientes(self,obj):
-        if obj.cliente_id:
+        if obj.cliente:
             return {
-                'id': obj.cliente_id.id,
-                'nome': obj.cliente_id.nome,
+                'id': obj.cliente.id,
+                'nome': obj.cliente.nome,
             }
         
         

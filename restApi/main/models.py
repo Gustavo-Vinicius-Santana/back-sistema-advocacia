@@ -43,7 +43,7 @@ class Representante(models.Model):
     telefone = models.CharField(max_length=20,unique=True)
     cpf = models.CharField(max_length=14,unique=True)
     cep = models.CharField(max_length=10)
-    cliente_id = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
     rua = models.CharField(max_length=255)
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255)
