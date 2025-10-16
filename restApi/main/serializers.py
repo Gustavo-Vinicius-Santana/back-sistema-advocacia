@@ -80,6 +80,7 @@ class EscritoriosSerializer(serializers.ModelSerializer):
         fields = '__all__'
     def get_endereco(self,obj):
         endereco = {
+            'cep':obj.cep,
             'numero':obj.numero,
             'rua':obj.rua,
             'estado':obj.estado,
