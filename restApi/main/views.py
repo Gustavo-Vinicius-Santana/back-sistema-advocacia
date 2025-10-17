@@ -46,7 +46,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 default = Value(0),
                 output_field=IntegerField()
             )
-        ).order_by('prioridade','id')
+        ).order_by('-prioridade','id')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -409,7 +409,7 @@ def processosArquivadosEspecificos(request,processo_id):
 
 
 #Apagar se realmente não for usar, comentada em 17/10/2025
-# assim como o seu respectivo trecho em main/urls.py
+#Assim como o seu respectivo trecho em main/urls.py
 """
 @permission_classes([IsAuthenticated])
 @csrf_exempt
