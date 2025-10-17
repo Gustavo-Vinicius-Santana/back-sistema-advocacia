@@ -46,7 +46,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 default = Value(0),
                 output_field=IntegerField()
             )
-        ).order_by('-prioridade','id')
+        ).order_by('prioridade','id')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
