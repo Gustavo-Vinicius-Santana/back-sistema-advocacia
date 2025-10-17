@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
+from django.db.models import Case, When, Value, IntegerField
 import json
 import jwt
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -29,7 +30,23 @@ class ClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().filter(contrato=True)
+        dataAtual = timezone.now().date()
+
+        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
+        dataInicio = dataAtual - relativedelta(years=65, days=5)
+        dataFim = dataAtual - relativedelta(years=65)
+
+        queryset = self.get_queryset().annotate(
+            prioridade=Case(
+                When(
+                    dataNascimento__range=(dataInicio, dataFim),
+                    contrato=True,
+                    then = Value(1)
+                ),
+                default = Value(0),
+                output_field=IntegerField()
+            )
+        ).order_by('-prioridade','id')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -391,6 +408,9 @@ def processosArquivadosEspecificos(request,processo_id):
         return JsonResponse({'error' : 'Método não permitido.'},status = 405)   
 
 
+#Apagar se realmente não for usar, comentada em 17/10/2025
+# assim como o seu respectivo trecho em main/urls.py
+"""
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def clientes65(request):
@@ -407,7 +427,7 @@ def clientes65(request):
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
-
+"""
 
 
 @permission_classes([IsAuthenticated])
