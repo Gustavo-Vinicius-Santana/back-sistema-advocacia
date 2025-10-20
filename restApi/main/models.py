@@ -15,6 +15,7 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
+    contactadoPor = models.CharField(max_length=255,blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
@@ -62,12 +63,6 @@ class ClienteEspera(models.Model):
     cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
 #Comentando para teste de commit 
-
-class ClienteSemContrato(models.Model):
-    nome = models.CharField(max_length=255)
-    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    observacoes = models.TextField(blank=True)
-    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
 
 
 class Parceiros(models.Model):
