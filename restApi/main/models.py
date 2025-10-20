@@ -23,6 +23,7 @@ class Cliente(models.Model):
     bairro = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
     foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
+    contactado = models.BooleanField(default=False)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.
