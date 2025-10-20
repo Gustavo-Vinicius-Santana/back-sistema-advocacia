@@ -33,8 +33,8 @@ class ClienteViewSet(viewsets.ModelViewSet):
         dataAtual = timezone.now().date()
 
         # intervalo de nascimentos para quem fará 65 anos em até 5 dias
-        dataInicio = dataAtual - relativedelta(years=65, days=5)
-        dataFim = dataAtual - relativedelta(years=65)
+        dataInicio = dataAtual - relativedelta(years=65)
+        dataFim = dataAtual - relativedelta(years=65, days=-5)
 
         queryset = self.get_queryset().annotate(
             prioridade=Case(
