@@ -41,12 +41,16 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
                     contrato=True,
-                    then = Value(1)
+                    then=Value(1)
                 ),
-                default = Value(0),
+                default=Value(0),
                 output_field=IntegerField()
             )
         ).order_by('-prioridade','id')
+        for c in queryset:
+            print(c.nome, c.dataNascimento, c.prioridade)
+
+        
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
