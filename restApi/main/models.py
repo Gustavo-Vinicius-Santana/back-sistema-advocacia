@@ -61,7 +61,7 @@ class ClienteEspera(models.Model):
     observacoes = models.TextField(blank=True)
     IdAdvogado = models.IntegerField(default=0)
     cpf = models.CharField(max_length=14, blank=True,unique=True)
-    dataNascimento = models.DateField(blank=True)
+    dataNascimento = models.DateField(blank=True,default='2000-01-01')
 
 #Comentando para teste de commit 
 

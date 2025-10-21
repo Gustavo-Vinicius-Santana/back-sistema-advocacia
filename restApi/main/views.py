@@ -36,7 +36,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         dataInicio = dataAtual - relativedelta(years=65)
         dataFim = dataAtual - relativedelta(years=65, days=-5)
 
-        queryset = self.get_queryset().annotate(
+        queryset = self.get_queryset().filter(contrato = True).annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
@@ -285,7 +285,7 @@ def emailRequestSenha(request):
         refresh = RefreshToken.for_user(user)
         refresh["purpose"] = "reset_password" 
         print(refresh)
-        emailSender = EmailSender('empresadoth@gmail.com')
+        emailSender = EmailSender(email)
         emailSender.startserver()
         message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:8000/resetPassword/{refresh}'
         emailSender.sendMensage('Resetar Senha', message)
