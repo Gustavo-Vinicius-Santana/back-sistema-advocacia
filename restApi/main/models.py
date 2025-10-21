@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
 
 
 def caminho_imagem(instance, filename):
@@ -15,6 +15,7 @@ class Cliente(models.Model):
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
+    contactadoPor = models.CharField(max_length=255,blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
@@ -23,6 +24,7 @@ class Cliente(models.Model):
     bairro = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
     foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
+    contactado = models.BooleanField(default=False)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.
@@ -38,27 +40,57 @@ class Cliente(models.Model):
         return f'Cliente {self.nome}'
     
     
-
+class Representante(models.Model):
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20,unique=True)
+    cpf = models.CharField(max_length=14,unique=True)
+    cep = models.CharField(max_length=10)
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
+    rua = models.CharField(max_length=255)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255)
+    estado = models.CharField(max_length=255)
+    bairro = models.CharField(max_length=255)
+    complemento = models.CharField(max_length=255,blank=True)
+    observacoes = models.TextField(blank=True)
 
 
 class ClienteEspera(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    observacao = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
     IdAdvogado = models.IntegerField(default=0)
-    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+    cpf = models.CharField(max_length=14, blank=True,unique=True)
+    dataNascimento = models.DateField(blank=True)
 
 #Comentando para teste de commit 
 
-class ClienteSemContrato(models.Model):
+
+class Parceiros(models.Model):
     nome = models.CharField(max_length=255)
+    email = models.EmailField(default='nenhum@provedor.com', unique=True)
     telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    observacao = models.TextField(blank=True)
-    cpf = models.CharField(max_length=14, default="Sem CPF.",unique=True)
+    cpf = models.CharField(max_length=18, default="Sem CNPJ.",unique=True)
+    rua = models.CharField(max_length=255,blank=True)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255,blank=True)
+    estado = models.CharField(max_length=255,blank=True)
+    bairro = models.CharField(max_length=255,blank=True)
+    observacoes = models.TextField(blank=True)
+    
+    
+class Escritorios(models.Model):
+    nome = models.CharField(max_length=255)
+    rua = models.CharField(max_length=255,blank=True)
+    numero = models.IntegerField(default=0)
+    estado = models.CharField(max_length=255,blank=True)
+    complemento = models.CharField(max_length=255,blank=True)
+    cep = models.CharField(max_length=20,blank=True)
+    cidade = models.CharField(max_length=255,blank=True)
+    bairro = models.CharField(max_length=255,blank=True)
 
 
-
-class Advogado(AbstractBaseUser, models.Model):
+class Advogado(AbstractBaseUser, PermissionsMixin):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
@@ -104,29 +136,26 @@ class Advogado(AbstractBaseUser, models.Model):
     
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome','password','telefone',]   
+    REQUIRED_FIELDS = ['nome','telefone']   
     
     def __str__(self):
         
         return self.nome
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.password = 'user'
-        super(Advogado, self).save(*args, **kwargs)
+   
     
     def get_by_natural_key(self, email):
         return self.get(email=email)
     
     
 
-    @classmethod
-    def create_superuser(cls, email, password=None, **extra_fields):
-        """
-        Cria e retorna um superadvogado com privilégios de admin.
-        """
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        return cls.create_user(email, password, **extra_fields)
+    # @classmethod
+    # def create_superuser(cls, email, password=None, **extra_fields):
+    #     """
+    #     Cria e retorna um superadvogado com privilégios de admin.
+    #     """
+    #     extra_fields.setdefault('is_staff', True)
+    #     extra_fields.setdefault('is_superuser', True)
+    #     return cls.create_user(email, password, **extra_fields)
 
 
 class Processo(models.Model):

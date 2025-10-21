@@ -1,22 +1,25 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Cliente, Advogado, Processo,Tarefas,ClienteEspera,Documentos
-
+from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    representanteNome = serializers.CharField(source='representante.nome', read_only=True)
+    parceiro = serializers.CharField(required=False, allow_blank=True)
+
     class Meta:
         model = Cliente
-        fields = ['id','nome','cpf','telefone','dataNascimento','profissao','parceiro','inss','cep', 'numero', 'rua', 'estado','bairro', 'cidade', 'complemento','endereco','observacoes','foto', 'contrato','motivo']
-    def get_endereco(self,obj):
+        fields = '__all__'
+
+    def get_endereco(self, obj):
         endereco = {
-            'cep':obj.cep,
-            'numero':obj.numero,
-            'rua':obj.rua,
-            'estado':obj.estado,
-            'bairro':obj.bairro,
-            'cidade':obj.cidade,
-            'complemento':obj.complemento,
-            }
+            'cep': obj.cep,
+            'numero': obj.numero,
+            'rua': obj.rua,
+            'estado': obj.estado,
+            'bairro': obj.bairro,
+            'cidade': obj.cidade,
+            'complemento': obj.complemento,
+        }
         return endereco
     """def validate(self,data):
         contrato = data.get('contrato')
@@ -25,6 +28,67 @@ class ClienteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"motivo": "Se o contrato for False, o motivo deve ser preenchido."})
         return data"""
     
+
+class RepresentanteSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    cliente_info = serializers.SerializerMethodField(method_name='get_clientes_info')
+    class Meta:
+        model = Representante
+        fields = '__all__'
+
+    def get_endereco(self,obj):
+        endereco = {
+            'cep':obj.cep,
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            'complemento':obj.complemento
+            }
+        return endereco
+    
+    def get_clientes_info(self,obj):
+        if obj.cliente:
+            return {
+                'id': obj.cliente.id,
+                'nome': obj.cliente.nome,
+            }
+        
+        
+        
+class ParceirosSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    class Meta:
+        model = Parceiros
+        fields = '__all__'
+        
+    def get_endereco(self,obj):
+        endereco = {
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            }
+        return endereco
+
+class EscritoriosSerializer(serializers.ModelSerializer):
+    endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    class Meta:
+        model = Escritorios
+        fields = '__all__'
+    def get_endereco(self,obj):
+        endereco = {
+            'cep':obj.cep,
+            'numero':obj.numero,
+            'rua':obj.rua,
+            'estado':obj.estado,
+            'complemento':obj.complemento,
+            'bairro':obj.bairro,
+            'cidade':obj.cidade,
+            }
+        return endereco
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -39,19 +103,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ClienteEsperaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClienteEspera
-        fields = ['id','nome','telefone','observacao','IdAdvogado','cpf']
+        fields = '__all__'
         
-        
-class ClienteSemContratoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ClienteEspera
-        fields = ['id','nome','telefone','observacao','cpf']
         
         
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = '__all__'
+        fields = ['id','nome','telefone','email','oab','is_active','is_staff','is_superuser','is_online','last_login']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:

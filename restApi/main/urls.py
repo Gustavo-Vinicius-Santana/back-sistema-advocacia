@@ -15,6 +15,9 @@ router.register(r'processos', views.ProcessoViewSet)
 router.register(r'tarefas', views.TarefasViewSet)
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
 router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
+router.register(r'representantes', views.RepresentanteViewSet,basename='representantes')
+router.register(r'parceiros', views.ParceirosViewSet,basename='parceiros')
+router.register(r'escritorios', views.EscritoriosViewSet,basename='escritorios')
 
 """BUG 14/07/2025: o endpoint de clientes espera os dados dos clientes ja cadastrados.
 Corrigido: em 1 hora"""
@@ -29,7 +32,7 @@ urlpatterns = [
     path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
     path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'),
     path('clientesSemContrato/', views.clientesSemContrato, name='clientesSemContrato'),
-    path('clientes65/', views.clientes65, name='clientes65'),
+    #path('clientes65/', views.clientes65, name='clientes65'),
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
     path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
