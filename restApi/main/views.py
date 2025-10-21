@@ -802,7 +802,8 @@ def clientesEsperaAdv(request,advogado_id):
                     'telefone': cliente.telefone,
                     'observacoes': cliente.observacoes,
                     'IdAdvogado': cliente.IdAdvogado,
-                    'cpf': cliente.cpf
+                    'cpf': cliente.cpf,
+                    'dataNascimento':cliente.dataNascimento
                 }
                 clientesEsperaAdv.append(cliente_data)
             return JsonResponse(clientesEsperaAdv, safe=False)
