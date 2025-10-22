@@ -26,7 +26,7 @@ Corrigido: em 1 hora"""
 
 urlpatterns = [
     path('token/', views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
-    path('token/resetValidate/<str:token>', views.validate_reset_token_endpoint(), name='validate_reset_token_endpoint'),
+    path('token/resetValidate/<str:token>', views.validate_reset_token_endpoint, name='validate_reset_token_endpoint'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('registrarAdvogado/', views.registrarAdv, name='registrarAdv'),
     path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
