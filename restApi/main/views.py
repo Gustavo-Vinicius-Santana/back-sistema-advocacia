@@ -287,7 +287,7 @@ def emailRequestSenha(request):
         print(refresh)
         emailSender = EmailSender(email)
         emailSender.startserver()
-        message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:8000/resetPassword/{refresh}'
+        message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:3000/recovery/newPassword/{refresh}'
         emailSender.sendMensage('Resetar Senha', message)
         return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
     else:
