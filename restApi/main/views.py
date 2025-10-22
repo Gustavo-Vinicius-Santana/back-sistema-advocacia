@@ -834,3 +834,145 @@ def clientesEsperaAdv(request,advogado_id):
             return JsonResponse({'error': 'Nenhum cliente encontrado.'}, status=404)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)        
+
+
+
+# Conjunto de funções para métricas dos gráficos
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoProcessosTipo(request):
+    if request.method == 'GET':
+        processosRuins = Processo.objects.filter(classificacao = 'ruim').count()
+        processosBons = Processo.objects.filter(classificacao = 'bom').count()
+        jsonFile = [
+            {"classificacao":"ruim",
+            "quantidade":processosRuins,
+            },
+            {"classificacao":"bom",
+            "quantidade":processosBons,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoProcessosGrupo(request):
+    if request.method == 'GET':
+        processosPrevidenciario = Processo.objects.filter(grupoAcao = 'previdenciario').count()
+        processoTrabalhista = Processo.objects.filter(grupoAcao = 'trabalhista').count()
+        jsonFile = [
+            {
+            "grupo":"previdenciario",
+            "quantidade":processosPrevidenciario,               
+            },
+            {
+            "grupo":"trabalhista",
+            "quantidade":processoTrabalhista,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])        
+def graficoProcessosStatus(request):
+    if request.method == 'GET':
+        processosStatusAtivo = Processo.objects.filter(status = 'ativo').count()
+        processoStatusArquivados = Processo.objects.filter(status = 'arquivado').count()
+        jsonFile = [
+            {
+            "status":"ativo",
+            "quantidade":processosStatusAtivo,               
+            },
+            {
+            "status":"arquivados",
+            "quantidade":processoStatusArquivados,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoClientesContrato(request):
+    if request.method == 'GET':
+        clientesComContrato = Cliente.objects.filter(contrato = True).count()
+        clientesSemContrato = Cliente.objects.filter(contrato = False).count()
+        jsonFile = [
+            {
+            "contrato":"com contrato",
+            "quantidade":clientesComContrato,               
+            },
+            {
+            "contrato":"sem contrato",
+            "quantidade":clientesSemContrato,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoClientesParceiro(request):
+    if request.method == 'GET':
+        parceiros = Parceiros.objects.all()
+        jsonFile = []
+        for parceiro in parceiros:
+            count = Cliente.objects.filter(parceiro=parceiro.nome).count()
+            jsonFile.append({
+                "parceiro": parceiro.nome,
+                "quantidade": count
+            })
+        
+        #pegar os clientes com de cada parceiro
+        #agrupa pelos parceiros
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoTarefasStatus(request):
+    if request.method == 'GET':
+        tarefasConcluidas = Tarefas.objects.filter(concluida = True).count()
+        tarefasEmAberto = Tarefas.objects.filter(concluida = False).count()
+        jsonFile = [
+            {
+            "status":"concluidas",
+            "quantidade":tarefasConcluidas,               
+            },
+            {
+            "status":"em aberto",
+            "quantidade":tarefasEmAberto,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+    
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoTarefasAdvogado(request):
+    if request.method == 'GET':
+        advogados = Advogado.objects.all()
+        jsonFile = []
+        for advogado in advogados:
+            count = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
+            jsonFile.append({
+                "advogado": advogado.nome,
+                "quantidade": count
+            })
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)

@@ -52,6 +52,18 @@ urlpatterns = [
     path('tarefasDeletadas/<int:tarefa_id>/',views.tarefasDeletadasEspecificas, name='tarefasDeletadasEspecificas'),
     path('processosArquivados/', views.processosArquivados, name='processosArquivados'),
     path('processosArquivados/<int:processo_id>/', views.processosArquivadosEspecificos, name='processosArquivadosEspecificos'),
+    path('graficos/processos/tipo/', views.graficoProcessosTipo, name='graficoProcessosTipo'),
+    path('graficos/processos/grupo/', views.graficoProcessosGrupo, name='graficoProcessosGrupo'),
+    path('graficos/processos/status/', views.graficoProcessosStatus, name='graficoProcessosStatus'),
+    path('graficos/clientes/contrato/', views.graficoClientesContrato, name='graficoClientesContrato'),
+    path('graficos/clientes/parceiro/', views.graficoClientesParceiro, name='graficoClientesParceiro'),
+    path('graficos/tarefas/status/', views.graficoTarefasStatus, name='graficoTarefasStatus'),
+    path('graficos/tarefas/advogados/', views.graficoTarefasAdvogado, name='graficoTarefasAdvogados'),
+
+
+
+
+    
     path('', include(router.urls)),
     # comentando para teste de commit
 ]

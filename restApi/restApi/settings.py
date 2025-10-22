@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
     
 ]
 REST_FRAMEWORK = {
@@ -141,6 +142,7 @@ AUTHENTICATION_BACKENDS = [
 SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "ACCESS_TOKEN_LIFETIME":timedelta(hours=8),
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 
