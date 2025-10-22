@@ -293,12 +293,34 @@ def emailRequestSenha(request):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
     
+    
+def validate_reset_token(token):
+    try:
+        refresh = RefreshToken(token)
+        if refresh.payload.get("purpose") != "reset_password":
+            return False
+        return True
+    except InvalidTokenError:
+        return False
+
+        
+def validate_reset_token_endpoint(request,token):
+    try:
+        refresh = RefreshToken(token)
+        if refresh.payload.get("purpose") != "reset_password":
+            return JsonResponse({'valid': False}, status=200)
+        return JsonResponse({'valid': True}, status=200)
+    except InvalidTokenError:
+        return JsonResponse({'valid': False}, status=200)
+    
 
 @csrf_exempt
 def resetPassword(request, token):
     if request.method == 'POST':
         data = json.loads(request.body)
         password = data.get('password')
+        if not validate_reset_token(token):
+            return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
         refresh = RefreshToken(token)
         advogado = refresh.payload['user_id']
         advogado = Advogado.objects.get(id=advogado)
