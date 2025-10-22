@@ -326,6 +326,7 @@ def resetPassword(request, token):
         advogado = Advogado.objects.get(id=advogado)
         advogado.set_password(password)
         advogado.save()
+        refresh.blacklist()
         return JsonResponse({'message': 'senha resetada com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
