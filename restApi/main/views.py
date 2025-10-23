@@ -47,10 +47,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 output_field=IntegerField()
             )
         ).order_by('-prioridade','id')
-        for c in queryset:
-            print(c.nome, c.dataNascimento, c.prioridade)
-
-        
+   
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -461,7 +458,24 @@ def clientes65(request):
 @csrf_exempt
 def clientesSemContrato(request):
     if request.method == 'GET':
-        clientes = Cliente.objects.filter(contrato = False)
+        dataAtual = timezone.now().date()
+
+        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
+        dataInicio = dataAtual - relativedelta(years=65)
+        dataFim = dataAtual - relativedelta(years=65, days=-5)
+
+        clientes = Cliente.objects.filter(contrato = False).annotate(
+            prioridade=Case(
+                When(
+                    dataNascimento__range=(dataInicio, dataFim),
+                    contrato=True,
+                    then=Value(1)
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).order_by('-prioridade','id')
+   
         serializer = ClienteSerializer(clientes, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
