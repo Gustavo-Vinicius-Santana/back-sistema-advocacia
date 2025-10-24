@@ -318,7 +318,10 @@ def resetPassword(request, token):
         password = data.get('password')
         if not validate_reset_token(token):
             return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
-        refresh = RefreshToken(token)
+        try:
+            refresh = RefreshToken(token)
+        except InvalidTokenError:
+            return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
         advogado = refresh.payload['user_id']
         advogado = Advogado.objects.get(id=advogado)
         advogado.set_password(password)
@@ -462,13 +465,12 @@ def clientesSemContrato(request):
 
         # intervalo de nascimentos para quem fará 65 anos em até 5 dias
         dataInicio = dataAtual - relativedelta(years=65)
-        dataFim = dataAtual - relativedelta(years=65, days=-5)
+        dataFim = dataAtual - relativedelta(years=65) + relativedelta(days=5) 
 
         clientes = Cliente.objects.filter(contrato = False).annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
-                    contrato=True,
                     then=Value(1)
                 ),
                 default=Value(0),
