@@ -32,22 +32,22 @@ class ClienteViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         dataAtual = timezone.now().date()
 
-        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
-        dataInicio = dataAtual - relativedelta(years=65)
-        dataFim = dataAtual - relativedelta(years=65, days=-5)
+        # Intervalo para quem está dentro de ±5 dias de completar 65 anos
+        data65 = dataAtual - relativedelta(years=65)
+        dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
+        dataFim = data65 + relativedelta(days=5)     # vai fazer (até 5 dias à frente)
 
-        queryset = self.get_queryset().filter(contrato = True).annotate(
+        queryset = self.get_queryset().filter(contrato=True).annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
-                    contrato=True,
                     then=Value(1)
                 ),
                 default=Value(0),
                 output_field=IntegerField()
             )
-        ).order_by('-prioridade','id')
-   
+        ).order_by('-prioridade', 'id')
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
