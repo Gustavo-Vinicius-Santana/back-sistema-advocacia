@@ -464,8 +464,9 @@ def clientesSemContrato(request):
         dataAtual = timezone.now().date()
 
         # intervalo de nascimentos para quem fará 65 anos em até 5 dias
-        dataInicio = dataAtual - relativedelta(years=65)
-        dataFim = dataAtual - relativedelta(years=65) + relativedelta(days=5) 
+        data65 = dataAtual - relativedelta(years=65)
+        dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
+        dataFim = data65 + relativedelta(days=5) 
 
         clientes = Cliente.objects.filter(contrato = False).annotate(
             prioridade=Case(
