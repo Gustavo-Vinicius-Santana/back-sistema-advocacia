@@ -18,7 +18,7 @@ class Cliente(models.Model):
     contactadoPor = models.CharField(max_length=255,blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
-    numero = models.IntegerField(default=0,blank=True)
+    numero = models.IntegerField(null=True)
     cidade = models.CharField(max_length=255,blank=True)
     estado = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
