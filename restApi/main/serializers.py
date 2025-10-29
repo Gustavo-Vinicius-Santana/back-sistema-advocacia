@@ -101,7 +101,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
     
 class ClienteEsperaSerializer(serializers.ModelSerializer):
-    foto = serializers.ImageField(use_url=True, required=False)
     class Meta:
         model = ClienteEspera
         fields = '__all__'
