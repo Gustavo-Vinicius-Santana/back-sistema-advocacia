@@ -252,20 +252,22 @@ def registrarAdv(request):
     email = data.get('email')
     password = data.get('password')
     oab = data.get('oab')
-    
+    foto = data.get('foto')  # ✅ novo campo
+
     if not nome or not email:
-        return JsonResponse ({"error": "Nome e email são obrigatórios."}, status=400)
-    
+        return JsonResponse({"error": "Nome e email são obrigatórios."}, status=400)
+
     advogado = Advogado.objects.create(
         nome=nome, 
         telefone=telefone,
         email=email,
-        oab = oab,
-        password=password
-        )
+        oab=oab,
+        foto=foto  # ✅ salva a URL da foto
+    )
     advogado.set_password(password)
     advogado.save()
-    return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)    
+
+    return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)
 """BUG no Login,02/06/2025
 Descrição: O login diz que não existe usuário cadastrado com esse email, 
 preciso debugar mais calmamente.

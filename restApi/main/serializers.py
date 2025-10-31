@@ -110,7 +110,7 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = ['id','nome','telefone','email','oab','is_active','is_staff','is_superuser','is_online','last_login']
+        fields = ['id','nome','telefone','email','foto','oab','is_active','is_staff','is_superuser','is_online','last_login']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:
