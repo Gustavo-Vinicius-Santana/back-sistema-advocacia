@@ -1,9 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
 
-
-def caminho_imagem(instance, filename):
-    return f'clientes/{filename}'
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
@@ -23,7 +20,7 @@ class Cliente(models.Model):
     estado = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
-    foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.png', blank=True, null=True)
+    foto = models.URLField(max_length=500, blank=True, null=True)
     contactado = models.BooleanField(default=False)
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso contrato for TRUE,
@@ -95,7 +92,7 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
     telefone = models.CharField(max_length=20)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
     oab = models.CharField(max_length=20, default='Nenhuma OAB',blank=True,null=True)
-    foto = models.CharField(max_length=255,blank=True,null=True)
+    foto = models.URLField(max_length=500, blank=True, null=True)
     #Django pede essas paradas pra o login, o nome é autoexplicativo
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
