@@ -162,3 +162,10 @@ class DocumentosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Documentos
         fields = '__all__'
+        
+
+class ArquivoModelSerializer(serializers.ModelSerializer):
+    clienteNome = serializers.CharField(source='cliente_id.nome', read_only=True)
+    class Meta:
+        model = ArquivoModel
+        fields = '__all__'

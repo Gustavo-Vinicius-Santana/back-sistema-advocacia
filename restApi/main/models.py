@@ -23,7 +23,7 @@ class Cliente(models.Model):
     foto = models.URLField(max_length=500, blank=True, null=True)
     contactado = models.BooleanField(default=False)
     """o Django não consegue criar campos apos a leitura da classe, então o
-    campo motivo deve ser criado e ignorado caso contrato for TRUE,
+    campo motivo deve ser criado e ignorado caso c/ontrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.
     #Atualização: 14/07/2025 Contrato e motivo foram removidos"""
     
@@ -204,3 +204,10 @@ class Documentos(models.Model):
     nome = models.CharField(max_length=100)
     tipo = models.CharField(max_length=100)
     documento = models.TextField()
+
+
+
+class ArquivoModel(models.Model):
+    cliente_id = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front
+    

@@ -75,10 +75,6 @@ class EscritoriosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]  
 
 
-def get_id_from_token(token):
-    token_format = token.split(' ')[1]
-    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-    return payload.get('user_id')
 
 
     
@@ -209,11 +205,25 @@ class DocumentosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]    
     
     
+class ArquivoModelViewSet(viewsets.ModelViewSet):
+    queryset = ArquivoModel.objects.all()
+    serializer_class = ArquivoModelSerializer
+    permission_classes = [IsAuthenticated]
+    
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
                     
-                    
+class ArquivoModelClienteIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, cliente):
+        try:
+            arquivos = ArquivoModel.objects.filter(cliente_id=cliente)
+        except ArquivoModel.DoesNotExist:
+            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
+        serializer = ArquivoModelSerializer(arquivos, many=True)
+        return Response(serializer.data)                  
                     
 class AdvogadosOnlineView(APIView):
     permission_classes = [IsAuthenticated]
@@ -292,6 +302,10 @@ def emailRequestSenha(request):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
     
+def get_id_from_token(token):
+    token_format = token.split(' ')[1]
+    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
     
 def validate_reset_token(token):
     try:
