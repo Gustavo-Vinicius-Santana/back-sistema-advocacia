@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 from django.views.decorators.csrf import csrf_exempt
@@ -135,9 +135,15 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
             }
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
-        
+        tiposLista = TipoTarefa.objects.all() 
+        tipos = []
+        for e in tiposLista:
+            tipos.append(e.nome)
         serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response({'error': str(e),'tipos disponíveis':tipos}, status=status.HTTP_400_BAD_REQUEST)
         self.perform_create(serializer)
         
         headers = self.get_success_headers(serializer.data)
@@ -195,6 +201,12 @@ class TarefasViewSet(viewsets.ModelViewSet):
         
 
         return response
+    
+
+class TipoTarefaViewSet(viewsets.ModelViewSet):
+    queryset = TipoTarefa.objects.all()
+    serializer_class = TipoTarefaSerializer
+    permission_classes= [IsAdminUser]
 
 
     

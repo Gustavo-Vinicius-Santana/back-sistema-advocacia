@@ -176,7 +176,7 @@ class Tarefas(models.Model):
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
-    tipoTarefa = models.CharField(max_length=50)
+    tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT, null=True, blank=True)
     descricao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
@@ -188,7 +188,14 @@ class Tarefas(models.Model):
     STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
     observacoes = models.TextField(default="Nenhuma observação.", blank=True)
-        
+
+
+
+class TipoTarefa(models.Model):
+    nome = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.nome        
         
 class HistoricoTarefas(models.Model):
     tarefaId = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
@@ -210,4 +217,6 @@ class Documentos(models.Model):
 class ArquivoModel(models.Model):
     cliente_id = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front
+    
+    
     
