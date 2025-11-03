@@ -146,6 +146,13 @@ class TarefasSerializer(serializers.ModelSerializer):
         model = Tarefas
         fields = '__all__'
         
+
+class TipoTarefaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoTarefa
+        fields = '__all__'
+
+
         
 class HistoricoTarefasSerializer(serializers.ModelSerializer):
     tarefaId = serializers.IntegerField(source='tarefaId.id',read_only=True)
