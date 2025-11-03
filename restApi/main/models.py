@@ -157,12 +157,16 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
 
 
 class Processo(models.Model):
+    titulo = models.CharField(max_length=255,blank=True)
     numeroProcesso = models.CharField(max_length=50, unique=True)
     STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
     status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='ativo')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
-    grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
+    grupoAcao=  models.ForeignKey('GrupoAcao', on_delete=models.PROTECT)
+    tipoAcao = models.ForeignKey('TipoAcao', on_delete=models.PROTECT, blank=True)
+    fase = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
+    etapa = models.ForeignKey('EtapaProcesso', on_delete=models.PROTECT, blank=True)
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
     classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
@@ -170,7 +174,29 @@ class Processo(models.Model):
     prioritario = models.BooleanField(default=False)
     concluido = models.BooleanField(default=False)
     
+
+class GrupoAcao(models.Model):
+    nome = models.CharField(max_length=100)
+    def __str__(self):
+        return self.nome
+
+class TipoAcao(models.Model):
+    nome = models.CharField(max_length=100)
+    grupoAcao = models.ForeignKey('GrupoAcao', on_delete=models.PROTECT)
+    def __str__(self):
+        return self.nome
         
+
+class FaseProcesso(models.Model):
+    nome = models.CharField(max_length=100)
+    def __str__(self):
+        return self.nome
+
+class EtapaProcesso(models.Model):
+    nome = models.CharField(max_length=100)
+    faseProcesso = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
+    def __str__(self):
+        return self.nome
 
 class Tarefas(models.Model):
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)

@@ -97,7 +97,28 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
     # vou investigar o motivo
     
+class GrupoAcaoViewSet(viewsets.ModelViewSet):
+    queryset = GrupoAcao.objects.all()
+    serializer_class = GrupoAcaoSerializer
+    permission_classes = [IsAuthenticated]  
+
+
+class TipoAcaoViewSet(viewsets.ModelViewSet):
+    queryset = TipoAcao.objects.all()
+    serializer_class = TipoAcaoSerializer
+    permission_classes = [IsAuthenticated]
     
+    
+class FaseProcessoViewSet(viewsets.ModelViewSet):
+    queryset = FaseProcesso.objects.all()
+    serializer_class = FaseProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
+class EtapaProcessoViewSet(viewsets.ModelViewSet):
+    queryset = EtapaProcesso.objects.all()
+    serializer_class = EtapaProcessoSerializer
+    permission_classes = [IsAuthenticated]
     
 class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()

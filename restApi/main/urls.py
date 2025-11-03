@@ -6,11 +6,14 @@ from . import views
 
 
 
-
 router = DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet)
 router.register(r'advogados', views.AdvogadoViewSet)
 router.register(r'processos', views.ProcessoViewSet)
+router.register(r'gruposAcao', views.GrupoAcaoViewSet, basename='gruposAcao')
+router.register(r'tiposAcao', views.TipoAcaoViewSet, basename='tiposAcao')
+router.register(r'fasesProcesso', views.FaseProcessoViewSet, basename='fasesProcesso')
+router.register(r'etapasProcesso', views.EtapaProcessoViewSet, basename='etapasProcesso')
 router.register(r'tarefas', views.TarefasViewSet)
 router.register(r'tipoTarefa', views.TipoTarefaViewSet, basename='tipoTarefa')
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')

@@ -133,6 +133,30 @@ class ProcessoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Processo
         fields = '__all__'
+        
+        
+class GrupoAcaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GrupoAcao
+        fields = '__all__'
+
+
+class TipoAcaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoAcao
+        fields = '__all__'
+        
+        
+class FaseProcessoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FaseProcesso
+        fields = '__all__'
+        
+        
+class EtapaProcessoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EtapaProcesso
+        fields = '__all__'
 
 
 class TarefasSerializer(serializers.ModelSerializer):
