@@ -242,6 +242,7 @@ class Documentos(models.Model):
 
 class ArquivoModel(models.Model):
     cliente_id = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255,default='Sem nome')
     arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front
     
     
