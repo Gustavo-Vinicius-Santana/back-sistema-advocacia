@@ -22,6 +22,7 @@ router.register(r'representantes', views.RepresentanteViewSet,basename='represen
 router.register(r'parceiros', views.ParceirosViewSet,basename='parceiros')
 router.register(r'escritorios', views.EscritoriosViewSet,basename='escritorios')
 router.register(r'arquivoModel', views.ArquivoModelViewSet, basename='arquivoModel')
+router.register(r'arquivoTarefa', views.ArquivoTarefaViewSet, basename='arquivoTarefa')
 
 """BUG 14/07/2025: o endpoint de clientes espera os dados dos clientes ja cadastrados.
 Corrigido: em 1 hora"""
@@ -64,6 +65,8 @@ urlpatterns = [
     path('graficos/clientes/parceiro/', views.graficoClientesParceiro, name='graficoClientesParceiro'),
     path('graficos/tarefas/status/', views.graficoTarefasStatus, name='graficoTarefasStatus'),
     path('graficos/tarefas/advogados/', views.graficoTarefasAdvogado, name='graficoTarefasAdvogados'),
+    path('etapas/<int:fase_id>/fase/', views.etapasPorFase, name='etapasPorFase'),
+    path('tiposAcao/<int:grupo_id>/grupo/', views.tipoPorGrupo, name='tiposAcaoPorGrupo'),
     
 
 

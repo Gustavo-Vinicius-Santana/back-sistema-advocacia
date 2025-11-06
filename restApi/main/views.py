@@ -242,6 +242,12 @@ class ArquivoModelViewSet(viewsets.ModelViewSet):
     queryset = ArquivoModel.objects.all()
     serializer_class = ArquivoModelSerializer
     permission_classes = [IsAuthenticated]
+
+    
+class ArquivoTarefaViewSet(viewsets.ModelViewSet):
+    queryset = ArquivoTarefa.objects.all()
+    serializer_class = ArquivoTarefaSerializer
+    permission_classes = [IsAuthenticated]
     
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -1039,6 +1045,30 @@ def graficoTarefasAdvogado(request):
                 "advogado": advogado.nome,
                 "quantidade": count
             })
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+    
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def etapasPorFase(request,fase_id):
+    if request.method == 'GET':
+        etapas = EtapaProcessoSerializer.objects.filter(faseId=fase_id)
+        serializer = EtapaProcessoSerializer(etapas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def tipoPorGrupo(request,grupo_id):
+    if request.method == 'GET':
+        fases = FaseProcessoSerializer.objects.filter(grupoId=grupo_id)
+        serializer = FaseProcessoSerializer(fases, many=True)
+        jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)

@@ -182,7 +182,7 @@ class GrupoAcao(models.Model):
 
 class TipoAcao(models.Model):
     nome = models.CharField(max_length=100)
-    grupoAcao = models.ForeignKey('GrupoAcao', on_delete=models.PROTECT)
+    grupoAcao = models.ForeignKey('GrupoAcao', on_delete=models.CASCADE)
     def __str__(self):
         return self.nome
         
@@ -194,7 +194,7 @@ class FaseProcesso(models.Model):
 
 class EtapaProcesso(models.Model):
     nome = models.CharField(max_length=100)
-    faseProcesso = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
+    faseProcesso = models.ForeignKey('FaseProcesso', on_delete=models.CASCADE)
     def __str__(self):
         return self.nome
 
@@ -246,4 +246,8 @@ class ArquivoModel(models.Model):
     arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front
     
     
-    
+
+class ArquivoTarefa(models.Model):
+    tarefa_id = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255,default='Sem nome')
+    arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front

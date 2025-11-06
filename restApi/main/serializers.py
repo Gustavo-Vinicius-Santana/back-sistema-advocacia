@@ -200,3 +200,11 @@ class ArquivoModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArquivoModel
         fields = '__all__'
+        
+        
+        
+class ArquivoTarefaSerializer(serializers.ModelSerializer):
+    tarefaNome = serializers.CharField(source='tarefa_id.nome', read_only=True)
+    class Meta:
+        model = ArquivoTarefa
+        fields = '__all__'
