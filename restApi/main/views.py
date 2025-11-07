@@ -563,12 +563,15 @@ def tarefasProcesso(request,processo_id):
         
 
 
+# editador por dennis
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def tarefasDeletadas(request):
     if request.method == 'GET':
         tarefas = Tarefas.objects.filter(deletada=True)
-        if tarefas is None:
+        try:
+            tarefas = Tarefas.objects.filter(deletada=True)
+        except:
             return JsonResponse({'error': 'Nenhuma tarefa deletada encontrada.'}, status=404)
         serializer = TarefasSerializer(tarefas, many=True)
         jsonFile = serializer.data
@@ -703,7 +706,12 @@ def historicoTarefasEspecificos(request,tarefa_id):
 @csrf_exempt
 def historicoTarefas(request):
     if request.method == 'GET':
-        historico = HistoricoTarefas.objects.all()
+    
+        try:
+            historico = HistoricoTarefas.objects.all()  
+        except HistoricoTarefas.DoesNotExist:
+            return JsonResponse({'error': 'Histórico não encontrado.'}, status=404)
+    
         serializer = HistoricoTarefasSerializer(historico, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -824,13 +832,21 @@ def tarefasAdvogadoCriador(request,advogado_id):
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
 
 
+# editado por dennis
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def advogadosDashboard(request,advogado_id):
     if request.method == 'GET':
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'},status=400)
-        tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
+        try:
+            advogado = Advogado.objects.get(id=advogado_id)
+        except Advogado.DoesNotExist:
+            return JsonResponse({'error': 'Advogado nao encontrado.'},status=404)
+        try:
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
+        except:
+            return JsonResponse({'error': 'Advogado nao encontrado.'},status=404)
         processosAtivos = Processo.objects.filter(advogadoCriadorId=advogado_id, status='ativo').exclude(concluido=True).count()
         
         if not tarefas.exists():
@@ -1012,12 +1028,19 @@ def graficoClientesParceiro(request):
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
         
+# editado por dennis
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def graficoTarefasStatus(request):
     if request.method == 'GET':
-        tarefasConcluidas = Tarefas.objects.filter(concluida = True).count()
-        tarefasEmAberto = Tarefas.objects.filter(concluida = False).count()
+        try:
+            tarefasConcluidas = Tarefas.objects.filter(concluida = True).count()
+        except:
+            tarefasConcluidas = 0
+        try:
+            tarefasEmAberto = Tarefas.objects.filter(concluida = False).count()
+        except:
+            tarefasEmAberto = 0
         jsonFile = [
             {
             "status":"concluidas",
@@ -1032,12 +1055,16 @@ def graficoTarefasStatus(request):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
     
-    
+# editado por dennis
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def graficoTarefasAdvogado(request):
     if request.method == 'GET':
-        advogados = Advogado.objects.all()
+        try:
+            advogados = Advogado.objects.all()
+        except:
+            return JsonResponse({'error': 'Nenhum advogado encontrado.'}, status=404)
+        
         jsonFile = []
         for advogado in advogados:
             count = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
@@ -1049,12 +1076,16 @@ def graficoTarefasAdvogado(request):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
     
-    
+# editado por dennis    
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def etapasPorFase(request,fase_id):
     if request.method == 'GET':
-        etapas = EtapaProcessoSerializer.objects.filter(faseId=fase_id)
+        try:
+            etapas = EtapaProcessoSerializer.objects.filter(faseId=fase_id)
+        except EtapaProcessoSerializer.DoesNotExist:
+            return JsonResponse({'error': 'Etapas nao encontradas.'}, status=404)
+        
         serializer = EtapaProcessoSerializer(etapas, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -1062,11 +1093,15 @@ def etapasPorFase(request,fase_id):
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 
+# editado por dennis
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def tipoPorGrupo(request,grupo_id):
     if request.method == 'GET':
-        fases = FaseProcessoSerializer.objects.filter(grupoId=grupo_id)
+        try:
+            fases = FaseProcessoSerializer.objects.filter(grupoId=grupo_id)
+        except FaseProcessoSerializer.DoesNotExist:
+            return JsonResponse({'error': 'Fases nao encontradas.'}, status=404)
         serializer = FaseProcessoSerializer(fases, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
