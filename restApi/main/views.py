@@ -1099,10 +1099,10 @@ def etapasPorFase(request,fase_id):
 def tipoPorGrupo(request,grupo_id):
     if request.method == 'GET':
         try:
-            fases = FaseProcesso.objects.filter(grupoId=grupo_id)
-        except FaseProcesso.DoesNotExist:
-            return JsonResponse({'error': 'Fases nao encontradas.'}, status=404)
-        serializer = FaseProcessoSerializer(fases, many=True)
+            tipo = TipoAcao.objects.filter(grupoAcao=grupo_id)
+        except TipoAcao.DoesNotExist:
+            return JsonResponse({'error': 'Tipo nao encontrado.'}, status=404)
+        serializer = TipoAcaoSerializer(tipo, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
     else:
