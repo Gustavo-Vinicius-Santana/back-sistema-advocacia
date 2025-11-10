@@ -163,6 +163,7 @@ class TarefasSerializer(serializers.ModelSerializer):
     processoOrigemNumero = serializers.CharField(source='processoOrigemId.numeroProcesso',read_only=True)
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
+    tipoTarefaNome = serializers.CharField(source='tipoTarefa.nome',read_only=True)
     clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
     prazoFinal = serializers.DateTimeField(input_formats=['%Y-%m-%d'])
     dataInicio = serializers.DateTimeField(read_only=True)
