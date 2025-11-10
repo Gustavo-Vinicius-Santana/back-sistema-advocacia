@@ -121,6 +121,8 @@ class AdvogadoResumidoSerializer(serializers.ModelSerializer):
 class ProcesssosResumidoSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True) 
     cliente = serializers.CharField(source='clienteId.nome',read_only=True)
+    grupoAcaoNome = serializers.CharField(source='grupoAcao.nome',read_only=True)
+    faseNome = serializers.CharField(source='fase.nome',read_only=True)
     
     class Meta:
         model = Processo
