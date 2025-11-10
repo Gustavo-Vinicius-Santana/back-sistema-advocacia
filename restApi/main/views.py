@@ -1082,8 +1082,8 @@ def graficoTarefasAdvogado(request):
 def etapasPorFase(request,fase_id):
     if request.method == 'GET':
         try:
-            etapas = EtapaProcessoSerializer.objects.filter(faseId=fase_id)
-        except EtapaProcessoSerializer == None:
+            etapas = EtapaProcesso.objects.filter(faseId=fase_id)
+        except EtapaProcesso.DoesNotExist:
             return JsonResponse({'error': 'Etapas nao encontradas.'}, status=404)
         
         serializer = EtapaProcessoSerializer(etapas, many=True)
@@ -1099,8 +1099,8 @@ def etapasPorFase(request,fase_id):
 def tipoPorGrupo(request,grupo_id):
     if request.method == 'GET':
         try:
-            fases = FaseProcessoSerializer.objects.filter(grupoId=grupo_id)
-        except FaseProcessoSerializer == None:
+            fases = FaseProcesso.objects.filter(grupoId=grupo_id)
+        except FaseProcesso.DoesNotExist:
             return JsonResponse({'error': 'Fases nao encontradas.'}, status=404)
         serializer = FaseProcessoSerializer(fases, many=True)
         jsonFile = serializer.data
