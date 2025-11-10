@@ -1083,7 +1083,7 @@ def etapasPorFase(request,fase_id):
     if request.method == 'GET':
         try:
             etapas = EtapaProcessoSerializer.objects.filter(faseId=fase_id)
-        except EtapaProcessoSerializer.DoesNotExist:
+        except EtapaProcessoSerializer == None:
             return JsonResponse({'error': 'Etapas nao encontradas.'}, status=404)
         
         serializer = EtapaProcessoSerializer(etapas, many=True)
@@ -1100,7 +1100,7 @@ def tipoPorGrupo(request,grupo_id):
     if request.method == 'GET':
         try:
             fases = FaseProcessoSerializer.objects.filter(grupoId=grupo_id)
-        except FaseProcessoSerializer.DoesNotExist:
+        except FaseProcessoSerializer == None:
             return JsonResponse({'error': 'Fases nao encontradas.'}, status=404)
         serializer = FaseProcessoSerializer(fases, many=True)
         jsonFile = serializer.data
