@@ -1082,7 +1082,7 @@ def graficoTarefasAdvogado(request):
 def etapasPorFase(request,fase_id):
     if request.method == 'GET':
         try:
-            etapas = EtapaProcesso.objects.filter(faseId=fase_id)
+            etapas = EtapaProcesso.objects.filter(faseProcesso=fase_id)
         except EtapaProcesso.DoesNotExist:
             return JsonResponse({'error': 'Etapas nao encontradas.'}, status=404)
         
