@@ -837,7 +837,8 @@ def tarefasAdvogadoCriador(request,advogado_id):
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:
             return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'})
-        serializer = TarefasSerializer(tarefas, many=True)
+        tarefasOrdenadas = tarefas.order_by('-urgente','prazoFinal')
+        serializer = TarefasSerializer(tarefasOrdenadas, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
     else:
