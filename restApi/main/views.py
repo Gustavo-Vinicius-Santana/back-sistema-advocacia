@@ -262,7 +262,19 @@ class ArquivoModelClienteIdView(APIView):
         except ArquivoModel.DoesNotExist:
             return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
         serializer = ArquivoModelSerializer(arquivos, many=True)
-        return Response(serializer.data)                  
+        return Response(serializer.data)  
+
+class ArquivoTarefaIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, tarefa):
+        try:
+            arquivos = ArquivoTarefa.objects.filter(tarefa_id=tarefa)
+        except ArquivoTarefa.DoesNotExist:
+            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
+        serializer = ArquivoTarefaSerializer(arquivos, many=True)
+        return Response(serializer.data)  
+
                     
 class AdvogadosOnlineView(APIView):
     permission_classes = [IsAuthenticated]

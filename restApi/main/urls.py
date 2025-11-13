@@ -51,6 +51,7 @@ urlpatterns = [
     path('advogados/<int:advogado_id>/clientesEspera/',views.clientesEsperaAdv, name='clientesEsperaAdv'),
     path('advogados/logout/', views.AdvogadoLogoutView.as_view(), name='advogadosLogout'),
     path('arquivoModel/cliente/<int:cliente>/', views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
+    path('arquivoTarefa/tarefa/<int:tarefa>/', views.ArquivoTarefaIdView.as_view(), name='arquivoTarefaTarefaId'),
     path('tarefasConcluidas/<int:tarefa_id>/', views.tarefasConcluidasEspecificas, name='tarefasConcluidasEspecificas'),
     path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
     path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
