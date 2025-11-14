@@ -227,7 +227,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
 class TipoTarefaViewSet(viewsets.ModelViewSet):
     queryset = TipoTarefa.objects.all()
     serializer_class = TipoTarefaSerializer
-    permission_classes= [IsAdminUser]
+    permission_classes= [IsAuthenticated]
 
 
     
