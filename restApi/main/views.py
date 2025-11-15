@@ -1006,14 +1006,12 @@ def graficoClientesContrato(request):
     if request.method == 'GET':
         clientesComContrato = Cliente.objects.filter(contrato = True).count()
         clientesSemContrato = Cliente.objects.filter(contrato = False).count()
+
         jsonFile = [
             {
-            "contrato":"com contrato",
-            "quantidade":clientesComContrato,               
-            },
-            {
-            "contrato":"sem contrato",
-            "quantidade":clientesSemContrato,
+                "categoria": "clientes",
+                "comContrato": clientesComContrato,
+                "semContrato": clientesSemContrato
             }
         ]
         return JsonResponse(jsonFile, safe=False)
