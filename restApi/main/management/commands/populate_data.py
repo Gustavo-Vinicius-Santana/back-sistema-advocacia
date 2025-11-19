@@ -1,378 +1,252 @@
-# main/management/commands/populate_data.py
 from django.core.management.base import BaseCommand
-from django.contrib.auth.hashers import make_password
-from main.models import *
 from django.utils import timezone
-from datetime import timedelta
+from faker import Faker
+import random
+
+from main.models import (
+    Cliente, Parceiros, Representante, ClienteEspera, Escritorios, Advogado,
+    GrupoAcao, TipoAcao, FaseProcesso, EtapaProcesso, Processo,
+    Tarefas, TipoTarefa, HistoricoTarefas, ArquivoModel, ArquivoTarefa, Documentos
+)
+
+
+fake = Faker("pt_BR")
+
 
 class Command(BaseCommand):
-    help = 'Popula o banco de dados com dados iniciais'
+    help = "Popula o banco de dados com dados fictícios para desenvolvimento"
 
-    def handle(self, *args, **options):
-        self.stdout.write('Iniciando população do banco...')
-        
-        # Criar Advogados
-        advogados_data = [
-            {
-                'nome': 'Dr. Roberto Almeida',
-                'telefone': '(11) 9888-7777',
-                'email': 'roberto.almeida@escritorio.com',
-                'oab': '123456/SP',
-                'password': 'senha123',
-                'is_staff': True,
-                'is_superuser': True
-            },
-            {
-                'nome': 'Dra. Patricia Lima', 
-                'telefone': '(11) 9777-6666',
-                'email': 'patricia.lima@escritorio.com',
-                'oab': '654321/SP',
-                'password': 'senha123',
-                'is_staff': True,
-                'is_superuser': False
-            },
-        ]
-        
-        for adv_data in advogados_data:
-            password = adv_data.pop('password')
-            advogado, created = Advogado.objects.get_or_create(
-                email=adv_data['email'],
-                defaults=adv_data
+    def handle(self, *args, **kwargs):
+        self.stdout.write(self.style.WARNING("🛠 Iniciando população do banco..."))
+
+        # -----------------------------------------
+        # 1. PARCEIROS
+        # -----------------------------------------
+        parceiros = []
+        for _ in range(3):
+            parceiro = Parceiros.objects.create(
+                nome=fake.company(),
+                email=fake.email(),
+                telefone=fake.phone_number(),
+                cpf=fake.cnpj(),
+                rua=fake.street_name(),
+                numero=fake.random_int(1, 999),
+                cidade=fake.city(),
+                estado="SP",
+                bairro=fake.bairro(),
+                observacoes="Parceiro gerado automaticamente."
             )
-            if created:
-                advogado.set_password(password)
-                advogado.save()
-                self.stdout.write(f'Advogado {advogado.nome} criado')
-        
-        # Criar Grupos de Ação
-        grupos_acao = [
-            {'nome': 'Trabalhista'},
-            {'nome': 'Cível'},
-            {'nome': 'Família'},
-            {'nome': 'Empresarial'},
-            {'nome': 'Criminal'},
-        ]
-        
-        grupos_obj = {}
-        for grupo in grupos_acao:
-            obj, created = GrupoAcao.objects.get_or_create(**grupo)
-            grupos_obj[grupo['nome']] = obj
-            if created:
-                self.stdout.write(f'GrupoAcao {obj.nome} criado')
-        
-        # Criar Tipos de Ação
-        tipos_acao = [
-            {'nome': 'Reclamação Trabalhista', 'grupoAcao': grupos_obj['Trabalhista']},
-            {'nome': 'Indenização por Danos Morais', 'grupoAcao': grupos_obj['Cível']},
-            {'nome': 'Divórcio Consensual', 'grupoAcao': grupos_obj['Família']},
-            {'nome': 'Ação de Cobrança', 'grupoAcao': grupos_obj['Empresarial']},
-        ]
-        
-        tipos_obj = {}
-        for tipo in tipos_acao:
-            obj, created = TipoAcao.objects.get_or_create(
-                nome=tipo['nome'],
-                grupoAcao=tipo['grupoAcao']
+            parceiros.append(parceiro)
+
+        self.stdout.write(self.style.SUCCESS("✔ Parceiros criados"))
+
+
+        # -----------------------------------------
+        # 2. ADVOGADOS
+        # -----------------------------------------
+        advogados = []
+        for _ in range(4):
+            advogado = Advogado.objects.create_user(
+                email=fake.email(),
+                password="123456",
+                nome=fake.name(),
+                telefone=fake.phone_number(),
+                oab=str(fake.random_int(10000, 99999)),
             )
-            tipos_obj[tipo['nome']] = obj
-            if created:
-                self.stdout.write(f'TipoAcao {obj.nome} criado')
-        
-        # Criar Fases
-        fases = [
-            {'nome': 'Pré-processual'},
-            {'nome': 'Postulatória'},
-            {'nome': 'Instrutória'},
-            {'nome': 'Decisória'},
-        ]
-        
-        fases_obj = {}
+            advogados.append(advogado)
+
+        self.stdout.write(self.style.SUCCESS("✔ Advogados criados"))
+
+
+        # -----------------------------------------
+        # 3. CLIENTES
+        # -----------------------------------------
+        clientes = []
+        for _ in range(10):
+            cliente = Cliente.objects.create(
+                nome=fake.name(),
+                cpf=fake.cpf(),
+                telefone=fake.phone_number(),
+                dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
+                profissao=fake.job(),
+                inss=fake.word(),
+                cep=fake.postcode(),
+                rua=fake.street_name(),
+                numero=fake.random_int(1, 999),
+                cidade=fake.city(),
+                estado="SP",
+                bairro=fake.bairro(),
+                complemento=fake.word(),
+                observacoes="Cliente de teste.",
+                parceiro=random.choice(parceiros),
+                contactado=fake.boolean(),
+                contrato=True
+            )
+            clientes.append(cliente)
+
+        self.stdout.write(self.style.SUCCESS("✔ Clientes criados"))
+
+
+        # -----------------------------------------
+        # 4. REPRESENTANTES
+        # -----------------------------------------
+        for cliente in clientes:
+            if fake.boolean():
+                Representante.objects.create(
+                    nome=fake.name(),
+                    telefone=fake.phone_number(),
+                    cpf=fake.cpf(),
+                    cep=fake.postcode(),
+                    cliente=cliente,
+                    rua=fake.street_name(),
+                    numero=fake.random_int(1, 999),
+                    cidade=fake.city(),
+                    estado="SP",
+                    bairro=fake.bairro(),
+                    complemento="",
+                    observacoes="Representante gerado automaticamente."
+                )
+
+        self.stdout.write(self.style.SUCCESS("✔ Representantes criados"))
+
+
+        # -----------------------------------------
+        # 5. CLIENTES ESPERA
+        # -----------------------------------------
+        for _ in range(5):
+            ClienteEspera.objects.create(
+                nome=fake.name(),
+                telefone=fake.phone_number(),
+                observacoes="Cliente aguardando atendimento",
+                IdAdvogado=random.choice(advogados).id,
+                cpf=fake.cpf()
+            )
+
+        self.stdout.write(self.style.SUCCESS("✔ ClientesEspera criados"))
+
+
+        # -----------------------------------------
+        # 6. ESCRITÓRIOS
+        # -----------------------------------------
+        for _ in range(3):
+            Escritorios.objects.create(
+                nome=fake.company(),
+                rua=fake.street_name(),
+                numero=fake.random_int(1, 999),
+                estado="SP",
+                complemento="",
+                cep=fake.postcode(),
+                cidade=fake.city(),
+                bairro=fake.bairro()
+            )
+
+        self.stdout.write(self.style.SUCCESS("✔ Escritórios criados"))
+
+
+        # -----------------------------------------
+        # 7. GRUPO, TIPO, FASE, ETAPA
+        # -----------------------------------------
+        grupos = []
+        for nome in ["Previdenciário", "Trabalhista", "Cível"]:
+            grupos.append(GrupoAcao.objects.create(nome=nome))
+
+        tipos = []
+        for grupo in grupos:
+            for nome in ["Inicial", "Recurso", "Revisão"]:
+                tipos.append(TipoAcao.objects.create(nome=nome, grupoAcao=grupo))
+
+        fases = []
+        for nome in ["Distribuição", "Audiência", "Sentença"]:
+            fases.append(FaseProcesso.objects.create(nome=nome))
+
+        etapas = []
         for fase in fases:
-            obj, created = FaseProcesso.objects.get_or_create(**fase)
-            fases_obj[fase['nome']] = obj
-            if created:
-                self.stdout.write(f'FaseProcesso {obj.nome} criado')
-        
-        # Criar Etapas
-        etapas = [
-            {'nome': 'Triagem Inicial', 'faseProcesso': fases_obj['Pré-processual']},
-            {'nome': 'Petição Inicial', 'faseProcesso': fases_obj['Postulatória']},
-            {'nome': 'Contestação', 'faseProcesso': fases_obj['Instrutória']},
-            {'nome': 'Sentença', 'faseProcesso': fases_obj['Decisória']},
-        ]
-        
-        etapas_obj = {}
-        for etapa in etapas:
-            obj, created = EtapaProcesso.objects.get_or_create(
-                nome=etapa['nome'],
-                faseProcesso=etapa['faseProcesso']
-            )
-            etapas_obj[etapa['nome']] = obj
-            if created:
-                self.stdout.write(f'EtapaProcesso {obj.nome} criado')
-        
-        # Criar Clientes
-        clientes_data = [
-            {
-                'nome': 'João Silva',
-                'cpf': '123.456.789-00',
-                'telefone': '(11) 9999-8888',
-                'dataNascimento': '1980-05-15',
-                'profissao': 'Engenheiro',
-                'cep': '01234-000',
-                'rua': 'Rua A',
-                'numero': 123,
-                'cidade': 'São Paulo',
-                'estado': 'SP',
-                'bairro': 'Centro',
-                'contactado': True
-            },
-            {
-                'nome': 'Maria Santos',
-                'cpf': '987.654.321-00', 
-                'telefone': '(11) 9777-6666',
-                'dataNascimento': '1975-08-22',
-                'profissao': 'Advogada',
-                'cep': '04567-000',
-                'rua': 'Av. B',
-                'numero': 456,
-                'cidade': 'São Paulo',
-                'estado': 'SP', 
-                'bairro': 'Jardins',
-                'contactado': True
-            },
-        ]
-        
-        clientes_obj = {}
-        for cliente_data in clientes_data:
-            obj, created = Cliente.objects.get_or_create(
-                cpf=cliente_data['cpf'],
-                defaults=cliente_data
-            )
-            clientes_obj[cliente_data['nome']] = obj
-            if created:
-                self.stdout.write(f'Cliente {obj.nome} criado')
-        
-        # Criar Processos
-        processos_data = [
-            {
-                'titulo': 'Indenização por Danos Morais',
-                'numeroProcesso': '0001C.2024.1.00.0001',
-                'status': 'ativo',
-                'clienteId': clientes_obj['João Silva'],
-                'advogadoCriadorId': Advogado.objects.get(email='roberto.almeida@escritorio.com'),
-                'grupoAcao': grupos_obj['Cível'],
-                'tipoAcao': tipos_obj['Indenização por Danos Morais'],
-                'fase': fases_obj['Postulatória'],
-                'etapa': etapas_obj['Petição Inicial'],
-                'classificacao': 'bom',
-                'descricao': 'Ação de indenização por danos morais',
-                'prioritario': False,
-                'concluido': False
-            },
-            {
-                'titulo': 'Reclamação Trabalhista',
-                'numeroProcesso': '0002T.2024.1.00.0002', 
-                'status': 'ativo',
-                'clienteId': clientes_obj['Maria Santos'],
-                'advogadoCriadorId': Advogado.objects.get(email='patricia.lima@escritorio.com'),
-                'grupoAcao': grupos_obj['Trabalhista'],
-                'tipoAcao': tipos_obj['Reclamação Trabalhista'],
-                'fase': fases_obj['Instrutória'],
-                'etapa': etapas_obj['Contestação'],
-                'classificacao': 'regular', 
-                'descricao': 'Reclamação trabalhista por horas extras',
-                'prioritario': True,
-                'concluido': False
-            },
-        ]
-        
-        processos_obj = {}
-        for processo_data in processos_data:
-            obj, created = Processo.objects.get_or_create(
-                numeroProcesso=processo_data['numeroProcesso'],
-                defaults=processo_data
-            )
-            processos_obj[processo_data['titulo']] = obj
-            if created:
-                self.stdout.write(f'Processo {obj.numeroProcesso} criado')
+            for nome in ["Início", "Andamento", "Conclusão"]:
+                etapas.append(EtapaProcesso.objects.create(nome=nome, faseProcesso=fase))
 
-        # CRIAR TIPOS DE TAREFA
-        tipos_tarefa_data = [
-            {'nome': 'Petição Inicial'},
-            {'nome': 'Audiência'},
-            {'nome': 'Recurso'},
-            {'nome': 'Diligência'},
-            {'nome': 'Consulta Processual'},
-            {'nome': 'Contestação'},
-            {'nome': 'Prova Pericial'},
-            {'nome': 'Sentença'},
-            {'nome': 'Protocolo'},
-            {'nome': 'Análise Documental'},
-            {'nome': 'Reunião com Cliente'},
-            {'nome': 'Laudo Técnico'},
-            {'nome': 'Cálculos'},
-            {'nome': 'Impugnação'},
-            {'nome': 'Sustentação Oral'},
-        ]
-        
-        tipos_tarefa_obj = {}
-        for tipo_data in tipos_tarefa_data:
-            obj, created = TipoTarefa.objects.get_or_create(**tipo_data)
-            tipos_tarefa_obj[tipo_data['nome']] = obj
-            if created:
-                self.stdout.write(f'TipoTarefa {obj.nome} criado')
+        self.stdout.write(self.style.SUCCESS("✔ Grupo/Tipos/Fases/Etapas criados"))
 
-        # CRIAR TAREFAS
-        # Obter advogados
-        adv_roberto = Advogado.objects.get(email='roberto.almeida@escritorio.com')
-        adv_patricia = Advogado.objects.get(email='patricia.lima@escritorio.com')
-        
-        # Datas para os prazos
-        hoje = timezone.now()
-        amanha = hoje + timedelta(days=1)
-        semana_que_vem = hoje + timedelta(days=7)
-        duas_semanas = hoje + timedelta(days=14)
-        
-        tarefas_data = [
-            # Tarefas para o Processo 1 - Indenização
-            {
-                'advogadoCriadorId': adv_roberto,
-                'advogadoResponsavelId': adv_roberto,
-                'processoOrigemId': processos_obj['Indenização por Danos Morais'],
-                'tipoTarefa': tipos_tarefa_obj['Petição Inicial'],
-                'descricao': 'Elaborar petição inicial detalhada com todos os fundamentos jurídicos',
-                'dataInicio': hoje - timedelta(days=5),
-                'prazoFinal': hoje + timedelta(days=2),
-                'urgente': True,
-                'concluida': True,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Incluir jurisprudência recente do STJ'
-            },
-            {
-                'advogadoCriadorId': adv_roberto,
-                'advogadoResponsavelId': adv_roberto,
-                'processoOrigemId': processos_obj['Indenização por Danos Morais'],
-                'tipoTarefa': tipos_tarefa_obj['Análise Documental'],
-                'descricao': 'Analisar documentos anexados pelo cliente',
-                'dataInicio': hoje,
-                'prazoFinal': amanha,
-                'urgente': False,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Verificar autenticidade dos comprovantes'
-            },
-            {
-                'advogadoCriadorId': adv_roberto,
-                'advogadoResponsavelId': adv_roberto,
-                'processoOrigemId': processos_obj['Indenização por Danos Morais'],
-                'tipoTarefa': tipos_tarefa_obj['Reunião com Cliente'],
-                'descricao': 'Reunião para alinhar estratégia processual',
-                'dataInicio': hoje,
-                'prazoFinal': semana_que_vem,
-                'urgente': False,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Preparar apresentação com timeline do processo'
-            },
-            
-            # Tarefas para o Processo 2 - Trabalhista
-            {
-                'advogadoCriadorId': adv_patricia,
-                'advogadoResponsavelId': adv_patricia,
-                'processoOrigemId': processos_obj['Reclamação Trabalhista'],
-                'tipoTarefa': tipos_tarefa_obj['Cálculos'],
-                'descricao': 'Calcular horas extras e verbas rescisórias',
-                'dataInicio': hoje - timedelta(days=3),
-                'prazoFinal': hoje + timedelta(days=1),
-                'urgente': True,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'perto do prazo',
-                'observacoes': 'Considerar adicional noturno e horas in itinere'
-            },
-            {
-                'advogadoCriadorId': adv_patricia,
-                'advogadoResponsavelId': adv_patricia,
-                'processoOrigemId': processos_obj['Reclamação Trabalhista'],
-                'tipoTarefa': tipos_tarefa_obj['Audiência'],
-                'descricao': 'Preparar documentação para audiência conciliação',
-                'dataInicio': hoje,
-                'prazoFinal': duas_semanas,
-                'urgente': False,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Listar testemunhas e preparar quesitos'
-            },
-            {
-                'advogadoCriadorId': adv_patricia,
-                'advogadoResponsavelId': adv_roberto,  # Tarefa delegada
-                'processoOrigemId': processos_obj['Reclamação Trabalhista'],
-                'tipoTarefa': tipos_tarefa_obj['Prova Pericial'],
-                'descricao': 'Solicitar perícia contábil',
-                'dataInicio': hoje,
-                'prazoFinal': semana_que_vem,
-                'urgente': False,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Contatar perito credenciado'
-            },
-            
-            # Tarefas gerais/administrativas
-            {
-                'advogadoCriadorId': adv_roberto,
-                'advogadoResponsavelId': adv_patricia,
-                'processoOrigemId': processos_obj['Indenização por Danos Morais'],
-                'tipoTarefa': tipos_tarefa_obj['Consulta Processual'],
-                'descricao': 'Verificar andamento processual no tribunal',
-                'dataInicio': hoje,
-                'prazoFinal': amanha,
-                'urgente': False,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Certificar-se da distribuição'
-            },
-            {
-                'advogadoCriadorId': adv_patricia,
-                'advogadoResponsavelId': adv_patricia,
-                'processoOrigemId': processos_obj['Reclamação Trabalhista'],
-                'tipoTarefa': tipos_tarefa_obj['Protocolo'],
-                'descricao': 'Protocolar petição inicial no fórum',
-                'dataInicio': hoje + timedelta(days=1),
-                'prazoFinal': hoje + timedelta(days=2),
-                'urgente': True,
-                'concluida': False,
-                'deletada': False,
-                'deletadaPor': 'Ninguem',
-                'status': 'em aberto',
-                'observacoes': 'Levar cópias autenticadas'
-            }
-        ]
-        
-        for tarefa_data in tarefas_data:
-            obj, created = Tarefas.objects.get_or_create(
-                advogadoCriadorId=tarefa_data['advogadoCriadorId'],
-                advogadoResponsavelId=tarefa_data['advogadoResponsavelId'],
-                processoOrigemId=tarefa_data['processoOrigemId'],
-                tipoTarefa=tarefa_data['tipoTarefa'],
-                descricao=tarefa_data['descricao'],
-                defaults=tarefa_data
+
+        # -----------------------------------------
+        # 8. PROCESSOS
+        # -----------------------------------------
+        processos = []
+        for cliente in clientes:
+            processo = Processo.objects.create(
+                titulo=f"Processo de {cliente.nome}",
+                numeroProcesso=str(fake.random_int(100000, 999999)),
+                clienteId=cliente,
+                advogadoCriadorId=random.choice(advogados),
+                grupoAcao=random.choice(grupos),
+                tipoAcao=random.choice(tipos),
+                fase=random.choice(fases),
+                etapa=random.choice(etapas),
+                dataContrato=timezone.now(),
+                descricao="Processo criado automaticamente.",
+                prioritario=fake.boolean()
             )
-            if created:
-                self.stdout.write(f'Tarefa "{obj.descricao[:30]}..." criada')
-        
-        self.stdout.write(self.style.SUCCESS('Banco populado com sucesso!'))
-        self.stdout.write(f'Total: {TipoTarefa.objects.count()} tipos de tarefa e {Tarefas.objects.count()} tarefas criadas')
+            processos.append(processo)
+
+        self.stdout.write(self.style.SUCCESS("✔ Processos criados"))
+
+
+        # -----------------------------------------
+        # 9. TAREFAS + HISTÓRICO
+        # -----------------------------------------
+        tipos_tarefa = []
+        for nome in ["Ligação", "Protocolo", "Despacho"]:
+            tipos_tarefa.append(TipoTarefa.objects.create(nome=nome))
+
+        for processo in processos:
+            for _ in range(2):
+                tarefa = Tarefas.objects.create(
+                    advogadoCriadorId=random.choice(advogados),
+                    advogadoResponsavelId=random.choice(advogados),
+                    processoOrigemId=processo,
+                    tipoTarefa=random.choice(tipos_tarefa),
+                    descricao="Tarefa gerada automaticamente.",
+                    prazoFinal=timezone.now() + timezone.timedelta(days=fake.random_int(1, 30)),
+                    urgente=fake.boolean(),
+                    concluida=fake.boolean(),
+                    deletada=False,
+                )
+
+                HistoricoTarefas.objects.create(
+                    tarefaId=tarefa,
+                    acao="Tarefa criada automaticamente."
+                )
+
+        self.stdout.write(self.style.SUCCESS("✔ Tarefas e históricos criados"))
+
+
+        # -----------------------------------------
+        # 10. ARQUIVOS
+        # -----------------------------------------
+        for cliente in clientes:
+            ArquivoModel.objects.create(
+                cliente_id=cliente,
+                nome="Documento Cliente",
+                arquivo="https://exemplo.com/documento.pdf"
+            )
+
+        for processo in processos:
+            ArquivoTarefa.objects.create(
+                tarefa_id=random.choice(processo.tarefas_set.all()),
+                nome="Arquivo Tarefa",
+                arquivo="https://exemplo.com/arquivo_tarefa.pdf"
+            )
+
+        self.stdout.write(self.style.SUCCESS("✔ Arquivos criados"))
+
+
+        # -----------------------------------------
+        # 11. DOCUMENTOS
+        # -----------------------------------------
+        for _ in range(5):
+            Documentos.objects.create(
+                nome=fake.word(),
+                tipo="PDF",
+                documento="Conteúdo de exemplo"
+            )
+
+        self.stdout.write(self.style.SUCCESS("\n🎉 Banco de dados populado com sucesso!"))

@@ -7,7 +7,6 @@ class Cliente(models.Model):
     telefone = models.CharField(max_length=20, unique=True)
     dataNascimento = models.DateField(blank=True, null=True)
     profissao = models.CharField(max_length=255,blank=True)
-    parceiro = models.CharField(max_length=255,blank=True) 
     inss = models.CharField(max_length=255,blank=True)
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
@@ -22,6 +21,7 @@ class Cliente(models.Model):
     observacoes = models.TextField(blank=True)
     foto = models.URLField(max_length=500, blank=True, null=True)
     contactado = models.BooleanField(default=False)
+    parceiro = models.ForeignKey("Parceiros", on_delete=models.SET_NULL, null=True, blank=True, related_name="clientes")
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso c/ontrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.

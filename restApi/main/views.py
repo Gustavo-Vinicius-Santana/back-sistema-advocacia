@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, Count
 import json
 import jwt
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -944,14 +944,28 @@ def clientesEsperaAdv(request,advogado_id):
 def graficoProcessosTipo(request):
     if request.method == 'GET':
         processosRuins = Processo.objects.filter(classificacao = 'ruim').count()
+        processosRegulares = Processo.objects.filter(classificacao = 'regular').count()
         processosBons = Processo.objects.filter(classificacao = 'bom').count()
+        processosExcelentes = Processo.objects.filter(classificacao = 'excelente').count()
+
         jsonFile = [
-            {"classificacao":"ruim",
-            "quantidade":processosRuins,
+            {
+                "classificacao":"ruim",
+                "quantidade":processosRuins,
             },
-            {"classificacao":"bom",
-            "quantidade":processosBons,
+            {
+                "classificacao":"regular",
+                "quantidade":processosRegulares,
+            },
+            {
+                "classificacao":"bom",
+                "quantidade":processosBons,
+            },
+            {
+                "classificacao":"excelente",
+                "quantidade":processosExcelentes,
             }
+
         ]
         return JsonResponse(jsonFile, safe=False)
     else:
@@ -961,22 +975,26 @@ def graficoProcessosTipo(request):
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def graficoProcessosGrupo(request):
-    if request.method == 'GET':
-        processosPrevidenciario = Processo.objects.filter(grupoAcao = 'previdenciario').count()
-        processoTrabalhista = Processo.objects.filter(grupoAcao = 'trabalhista').count()
-        jsonFile = [
-            {
-            "grupo":"previdenciario",
-            "quantidade":processosPrevidenciario,               
-            },
-            {
-            "grupo":"trabalhista",
-            "quantidade":processoTrabalhista,
-            }
-        ]
-        return JsonResponse(jsonFile, safe=False)
-    else:
-        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    # Agrupa e conta processos por grupo
+    grupos = (
+        GrupoAcao.objects
+        .annotate(quantidade=Count('processo'))
+        .values('nome', 'quantidade')
+    )
+
+    # Ajusta a estrutura do JSON
+    json_file = [
+        {
+            "grupo": g['nome'],
+            "quantidade": g['quantidade']
+        }
+        for g in grupos
+    ]
+
+    return JsonResponse(json_file, safe=False)
 
         
 @csrf_exempt
@@ -987,13 +1005,10 @@ def graficoProcessosStatus(request):
         processoStatusArquivados = Processo.objects.filter(status = 'arquivado').count()
         jsonFile = [
             {
-            "status":"ativo",
-            "quantidade":processosStatusAtivo,               
+            "categoria":"atual",
+            "ativos":processosStatusAtivo,    
+            "arquivados":processoStatusArquivados,           
             },
-            {
-            "status":"arquivados",
-            "quantidade":processoStatusArquivados,
-            }
         ]
         return JsonResponse(jsonFile, safe=False)
     else:
@@ -1022,21 +1037,20 @@ def graficoClientesContrato(request):
 @csrf_exempt
 @permission_classes([IsAuthenticated])
 def graficoClientesParceiro(request):
-    if request.method == 'GET':
-        parceiros = Parceiros.objects.all()
-        jsonFile = []
-        for parceiro in parceiros:
-            count = Cliente.objects.filter(parceiro=parceiro.nome).count()
-            jsonFile.append({
-                "parceiro": parceiro.nome,
-                "quantidade": count
-            })
-        
-        #pegar os clientes com de cada parceiro
-        #agrupa pelos parceiros
-        return JsonResponse(jsonFile, safe=False)
-    else:
-        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    parceiros = Parceiros.objects.annotate(quantidade_clientes=Count('clientes'))
+    
+    json_file = [
+        {
+            "parceiro": parceiro.nome,
+            "clientes": parceiro.quantidade_clientes
+        }
+        for parceiro in parceiros
+    ]
+
+    return JsonResponse(json_file, safe=False)
 
         
 # editado por dennis
@@ -1081,7 +1095,7 @@ def graficoTarefasAdvogado(request):
             count = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
             jsonFile.append({
                 "advogado": advogado.nome,
-                "quantidade": count
+                "tarefas": count
             })
         return JsonResponse(jsonFile, safe=False)
     else:
