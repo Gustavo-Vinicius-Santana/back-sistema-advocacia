@@ -4,6 +4,7 @@ from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     representanteNome = serializers.CharField(source='representante.nome', read_only=True)
+    parceiroNome = serializers.CharField(source='parceiro.nome', read_only=True)
 
     class Meta:
         model = Cliente
