@@ -996,6 +996,59 @@ def graficoProcessosGrupo(request):
 
     return JsonResponse(json_file, safe=False)
 
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficosProcessosFase(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    try:
+        # Agrupa e conta processos por fase
+        fases = (
+            FaseProcesso.objects
+            .annotate(quantidade=Count('processo'))  # Conta os processos relacionados
+            .values('nome', 'quantidade')
+            .order_by('nome')
+        )
+
+        # Estrutura do JSON
+        json_data = [
+            {
+                "fase": fase['nome'],
+                "quantidade": fase['quantidade']
+            }
+            for fase in fases
+        ]
+
+        return JsonResponse(json_data, safe=False)
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])        
+def graficosProcessosProtocolarPeticionar(request):
+    if request.method == 'GET':
+        try:
+            # Filtro case-insensitive para evitar problemas com maiúsculas/minúsculas
+            processosProtocolar = Processo.objects.filter(tipoAcao__nome__iexact='protocolar').count()
+            processosPeticionar = Processo.objects.filter(tipoAcao__nome__iexact='peticionar').count()
+
+            jsonFile = [
+                {
+                    "categoria": "tipo_acao",
+                    "protocolar": processosProtocolar,    
+                    "peticionar": processosPeticionar,           
+                },
+            ]
+            return JsonResponse(jsonFile, safe=False)
+        
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
         
 @csrf_exempt
 @permission_classes([IsAuthenticated])        
