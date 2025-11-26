@@ -418,6 +418,24 @@ def processosClientes(request,cliente_id):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
+        
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosClientesNome(request,cliente_nome):
+    if request.method == 'GET':
+        if not cliente_nome:
+            return JsonResponse({'error': 'Nome do cliente obrigatório.'}, status=400)
+        clientes = Cliente.objects.filter(nome__icontains=cliente_nome)
+        if clientes is None: 
+            return JsonResponse({'error': 'Nenhum cliente encontrado com esse nome.'}, status=404)
+        processos = Processo.objects.filter(clienteId__in=clientes)
+        clienteSerializer = ClienteSerializer(clientes, many=True)
+        processosSerializer = ProcessoSerializer(processos, many=True)
+        jsonFile = {'clientes': clienteSerializer.data, 'processos': processosSerializer.data}
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 
 @permission_classes([IsAuthenticated])
