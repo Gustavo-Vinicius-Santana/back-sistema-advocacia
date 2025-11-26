@@ -40,6 +40,7 @@ urlpatterns = [
     path('clientesSemContrato/', views.clientesSemContrato, name='clientesSemContrato'),
     #path('clientes65/', views.clientes65, name='clientes65'),
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
+    path('processosCliente/<int:cliente_id>/', views.processosCliente, name='processosCliente'),
     path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
     path('advogados/resumido/', views.advogadosResumido, name= 'advogadosResumido'),

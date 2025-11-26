@@ -749,6 +749,24 @@ def processosAdvogado(request,advogado_id):
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
     
 
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def processosCliente(request,cliente_id):
+    if request.method == 'GET':
+        if not cliente_id:
+            return JsonResponse({'error': 'ID do cliente é obrigatório.'})
+        try:
+            processosCliente = Processo.objects.filter(clienteId=cliente_id)
+            serializer  = ProcessoSerializer(processosCliente,many=True)
+            jsonFile = serializer.data
+            return JsonResponse(jsonFile, safe=False)
+        except:
+            return JsonResponse({'error': 'Cliente nao encontrado.'})
+    else:
+        return JsonResponse({'error' : 'Método não permitido.'}, status=405)
+
+
+
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def advogadosResumido(request):

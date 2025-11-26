@@ -170,7 +170,7 @@ class Processo(models.Model):
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
     classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
-    descricao = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
     concluido = models.BooleanField(default=False)
     
@@ -203,7 +203,6 @@ class Tarefas(models.Model):
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
     tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT, null=True, blank=True)
-    descricao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
     urgente = models.BooleanField(default=False,blank=True)
