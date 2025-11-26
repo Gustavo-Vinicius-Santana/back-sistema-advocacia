@@ -82,7 +82,27 @@ class Command(BaseCommand):
                 contactado=fake.boolean(),
                 contrato=True
             )
+            clienteMesmoNome = Cliente.objects.create(
+                nome="Gustavo",
+                cpf=fake.cpf(),
+                telefone=fake.phone_number(),
+                dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
+                profissao=fake.job(),
+                inss=fake.word(),
+                cep=fake.postcode(),
+                rua=fake.street_name(),
+                numero=fake.random_int(1, 999),
+                cidade=fake.city(),
+                estado="SP",
+                bairro=fake.bairro(),
+                complemento=fake.word(),
+                observacoes="Cliente de teste.",
+                parceiro=random.choice(parceiros),
+                contactado=fake.boolean(),
+                contrato=True
+            )
             clientes.append(cliente)
+            clientes.append(clienteMesmoNome)
 
         self.stdout.write(self.style.SUCCESS("✔ Clientes criados"))
 
@@ -182,7 +202,7 @@ class Command(BaseCommand):
                 fase=random.choice(fases),
                 etapa=random.choice(etapas),
                 dataContrato=timezone.now(),
-                descricao="Processo criado automaticamente.",
+                observacoes="Processo criado automaticamente.",
                 prioritario=fake.boolean()
             )
             processos.append(processo)
@@ -204,7 +224,6 @@ class Command(BaseCommand):
                     advogadoResponsavelId=random.choice(advogados),
                     processoOrigemId=processo,
                     tipoTarefa=random.choice(tipos_tarefa),
-                    descricao="Tarefa gerada automaticamente.",
                     prazoFinal=timezone.now() + timezone.timedelta(days=fake.random_int(1, 30)),
                     urgente=fake.boolean(),
                     concluida=fake.boolean(),
