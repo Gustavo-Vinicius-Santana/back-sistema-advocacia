@@ -414,13 +414,6 @@ def processosClientes(request,cliente_id):
         processos = Processo.objects.filter(clienteId=cliente)
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
-        advogadCriadorNome = get_object_or_404(Advogado, id=jsonFile[0]['advogadoCriadorId'])
-        if jsonFile:
-            try:
-                jsonFile[0]['advogadCriadorNome']= advogadCriadorNome.nome
-                jsonFile[0]['clienteNome'] = cliente.nome
-            except:
-                jsonFile[0]['advogadCriadorNome']= 'Não encontrados'
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
@@ -748,22 +741,6 @@ def processosAdvogado(request,advogado_id):
     else:
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
     
-
-@csrf_exempt
-@permission_classes([IsAuthenticated])
-def processosCliente(request,cliente_id):
-    if request.method == 'GET':
-        if not cliente_id:
-            return JsonResponse({'error': 'ID do cliente é obrigatório.'})
-        try:
-            processosCliente = Processo.objects.filter(clienteId=cliente_id)
-            serializer  = ProcessoSerializer(processosCliente,many=True)
-            jsonFile = serializer.data
-            return JsonResponse(jsonFile, safe=False)
-        except:
-            return JsonResponse({'error': 'Cliente nao encontrado.'})
-    else:
-        return JsonResponse({'error' : 'Método não permitido.'}, status=405)
 
 
 
