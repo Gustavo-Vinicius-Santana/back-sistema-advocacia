@@ -188,7 +188,7 @@ class Command(BaseCommand):
 
 
         # -----------------------------------------
-        # 8. PROCESSOS
+        # 8. PROCESSOS (CORRIGIDO - AGORA COM OBSERVACOES)
         # -----------------------------------------
         processos = []
         for cliente in clientes:
@@ -202,7 +202,7 @@ class Command(BaseCommand):
                 fase=random.choice(fases),
                 etapa=random.choice(etapas),
                 dataContrato=timezone.now(),
-                observacoes="Processo criado automaticamente.",
+                observacoes="Processo criado automaticamente.",  # CAMPO ADICIONADO DE VOLTA
                 prioritario=fake.boolean()
             )
             processos.append(processo)
@@ -249,11 +249,14 @@ class Command(BaseCommand):
             )
 
         for processo in processos:
-            ArquivoTarefa.objects.create(
-                tarefa_id=random.choice(processo.tarefas_set.all()),
-                nome="Arquivo Tarefa",
-                arquivo="https://exemplo.com/arquivo_tarefa.pdf"
-            )
+            # Verifica se existem tarefas antes de tentar acessar
+            tarefas_processo = processo.tarefas_set.all()
+            if tarefas_processo.exists():
+                ArquivoTarefa.objects.create(
+                    tarefa_id=random.choice(tarefas_processo),
+                    nome="Arquivo Tarefa",
+                    arquivo="https://exemplo.com/arquivo_tarefa.pdf"
+                )
 
         self.stdout.write(self.style.SUCCESS("✔ Arquivos criados"))
 
