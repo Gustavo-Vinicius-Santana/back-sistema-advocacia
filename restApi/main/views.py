@@ -20,14 +20,22 @@ from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta, datetime, time
 from dateutil.relativedelta import relativedelta
+from rest_framework.pagination import PageNumberPagination
 
 
 
+
+
+class standardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
         dataAtual = timezone.now().date()
@@ -88,6 +96,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     queryset = Processo.objects.all()
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
@@ -124,6 +133,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
     def get_queryset(self):
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
@@ -426,7 +436,7 @@ def processosClientesNome(request,cliente_nome):
     if request.method == 'GET':
         if not cliente_nome:
             return JsonResponse({'error': 'Nome do cliente obrigatório.'}, status=400)
-        clientes = Cliente.objects.filter(nome__icontains=cliente_nome)
+        clientes = Cliente.objects.filvter(nome__icontains=cliente_nome)
         if clientes is None: 
             return JsonResponse({'error': 'Nenhum cliente encontrado com esse nome.'}, status=404)
         processos = Processo.objects.filter(clienteId__in=clientes)
