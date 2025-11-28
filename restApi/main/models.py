@@ -206,6 +206,7 @@ class Tarefas(models.Model):
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
     urgente = models.BooleanField(default=False,blank=True)
+    arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
     concluida = models.BooleanField(default=False,blank=True)
     deletada = models.BooleanField(default=False)
