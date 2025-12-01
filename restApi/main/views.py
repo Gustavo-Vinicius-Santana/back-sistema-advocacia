@@ -316,6 +316,31 @@ class AdvogadoLogoutView(APIView):
         #implementar o logout baseado no tempo do Token JWT
 
 
+class BuscarClienteCamposView(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['nome','cpf','telefone','inss','parceiro.nome']
+    pagination_class = standardResultsSetPagination
+    
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+
+        if not field or not value: 
+            raise ValueError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field not in self.alowed_field:
+            raise ValueError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        
+        queryset = Cliente.objects.filter(**{field: value}).order_by('id')
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = ClienteSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        return Response(ClienteSerializer(queryset, many=True).data)
+
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
