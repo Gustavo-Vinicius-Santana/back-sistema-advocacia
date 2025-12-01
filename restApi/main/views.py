@@ -318,7 +318,7 @@ class AdvogadoLogoutView(APIView):
 
 class BuscarClienteCamposView(APIView):
     permission_classes = [IsAuthenticated]
-    alowed_field = ['nome','cpf','telefone','inss','parceiro.nome']
+    alowed_field = ['nome','cpf','telefone','inss','parceiro']
     pagination_class = standardResultsSetPagination
     
     def get(self, request):
@@ -334,7 +334,13 @@ class BuscarClienteCamposView(APIView):
                 "error": f"O campo '{field}' não é permitido para busca."
             })
         
-        queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
+        if field == 'parceiro':
+            queryset = Cliente.objects.filter(
+                parceiro__nome__icontains=value
+            ).order_by('id')
+        
+        else:     
+            queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ClienteSerializer(queryset, many=True).data)
 
 @csrf_exempt
