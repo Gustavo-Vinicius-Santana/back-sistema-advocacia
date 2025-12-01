@@ -343,7 +343,7 @@ class BuscarClienteCamposView(APIView):
             queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ClienteSerializer(queryset, many=True).data)
 
-
+#view para buscar processos por campo específico
 class BuscarProcessoCampo(APIView):
     permission_classes = [IsAuthenticated]
     alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId']
@@ -370,7 +370,7 @@ class BuscarProcessoCampo(APIView):
                 clienteId__nome__icontains=value
             ).order_by('id')
         return Response(ProcessoSerializer(queryset, many=True).data)   
-        
+
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
