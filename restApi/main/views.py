@@ -335,10 +335,6 @@ class BuscarClienteCamposView(APIView):
             })
         
         queryset = Cliente.objects.filter(**{field: value}).order_by('id')
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = ClienteSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
         return Response(ClienteSerializer(queryset, many=True).data)
 
 @csrf_exempt
