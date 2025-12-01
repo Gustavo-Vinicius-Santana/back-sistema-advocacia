@@ -21,6 +21,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime, time
 from dateutil.relativedelta import relativedelta
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
 
 
 
@@ -344,7 +345,7 @@ class BuscarClienteCamposView(APIView):
         return Response(ClienteSerializer(queryset, many=True).data)
 
 #view para buscar processos por campo específico
-class BuscarProcessoCampo(APIView):
+class BuscarProcessoCampoView(APIView):
     permission_classes = [IsAuthenticated]
     alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId']
     pagination_class = standardResultsSetPagination
@@ -354,11 +355,11 @@ class BuscarProcessoCampo(APIView):
         value = request.query_params.get('value')
         
         if not field or not value:
-            raise ValueError({
+            raise ValidationError({
                 "error": "Os campos 'field' e 'value' são obrigatórios."
             })
         if field not in self.alowed_field:
-            raise ValueError({
+            raise ValidationError({
                 "error": f"O campo '{field}' não é permitido para busca."
             })
         if field == 'advogadoCriadorId':
@@ -373,6 +374,36 @@ class BuscarProcessoCampo(APIView):
             queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ProcessoSerializer(queryset, many=True).data)   
 
+
+class BuscarTarefaCampo(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['advogadoCriadorId','advogadoResponsavelId','processoOrigemId']
+
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        if field not in self.alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field == 'advogadoCriadorId':
+            queryset = Tarefas.objects.filter(
+                advogadoCriadorId__nome__icontains=value
+            ).order_by('id')
+        elif field == 'advogadoResponsavelId':
+            queryset = Tarefas.objects.filter(
+                advogadoResponsavelId__nome__icontains=value
+            ).order_by('id')
+        elif field == 'processoOrigemId':
+            queryset = Tarefas.objects.filter(
+                processoOrigemId__titulo__icontains=value
+            ).order_by('id')
+        return Response(TarefasSerializer(queryset, many=True).data)
+            
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
