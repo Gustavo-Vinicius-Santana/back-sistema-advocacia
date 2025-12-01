@@ -343,6 +343,34 @@ class BuscarClienteCamposView(APIView):
             queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ClienteSerializer(queryset, many=True).data)
 
+
+class BuscarProcessoCampo(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId']
+    pagination_class = standardResultsSetPagination
+    
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        
+        if not field or not value:
+            raise ValueError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field not in self.alowed_field:
+            raise ValueError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if field == 'advogadoCriadorId':
+            queryset = Processo.objects.filter(
+                advogadoCriadorId__nome__icontains=value
+            ).order_by('id')
+        elif field == 'clienteId':
+            queryset = Processo.objects.filter(
+                clienteId__nome__icontains=value
+            ).order_by('id')
+        return Response(ProcessoSerializer(queryset, many=True).data)   
+        
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):

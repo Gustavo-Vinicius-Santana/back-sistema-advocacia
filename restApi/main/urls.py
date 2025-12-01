@@ -43,6 +43,7 @@ urlpatterns = [
     path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'),
     path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'),
     path('processosClientesNome/<str:cliente_nome>/', views.processosClientesNome, name='processosClientesNome'),
+    path('BuscarProcessoCampos/',views.BuscarProcessoCampo.as_view(), name='buscarProcessoCamposView'),
     path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),
     path('advogados/resumido/', views.advogadosResumido, name= 'advogadosResumido'),
     path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard'),
