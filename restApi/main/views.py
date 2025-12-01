@@ -369,6 +369,8 @@ class BuscarProcessoCampo(APIView):
             queryset = Processo.objects.filter(
                 clienteId__nome__icontains=value
             ).order_by('id')
+        else:
+            queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ProcessoSerializer(queryset, many=True).data)   
 
 @csrf_exempt
