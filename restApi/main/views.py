@@ -55,6 +55,11 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 output_field=IntegerField()
             )
         ).order_by('-prioridade', 'id')
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -101,6 +106,10 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
         serializer = self.get_serializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
     
     # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
@@ -134,6 +143,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = standardResultsSetPagination
+    
     def get_queryset(self):
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
