@@ -334,7 +334,7 @@ class BuscarClienteCamposView(APIView):
                 "error": f"O campo '{field}' não é permitido para busca."
             })
         
-        queryset = Cliente.objects.filter(**{field: value}).order_by('id')
+        queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
         return Response(ClienteSerializer(queryset, many=True).data)
 
 @csrf_exempt
