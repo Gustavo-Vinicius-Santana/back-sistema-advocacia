@@ -321,11 +321,11 @@ class BuscarClienteCamposView(APIView):
     permission_classes = [IsAuthenticated]
     alowed_field = ['nome','cpf','telefone','inss','parceiro']
     pagination_class = standardResultsSetPagination
-    
     def get(self, request):
         field = request.query_params.get('field')
         value = request.query_params.get('value')
-
+        order_by = request.query_params.get('order_by')
+        
         if not field or not value: 
             raise ValueError({
                 "error": "Os campos 'field' e 'value' são obrigatórios."
@@ -334,14 +334,20 @@ class BuscarClienteCamposView(APIView):
             raise ValueError({
                 "error": f"O campo '{field}' não é permitido para busca."
             })
-        
-        if field == 'parceiro':
-            queryset = Cliente.objects.filter(
-                parceiro__nome__icontains=value
-            ).order_by('id')
-        
-        else:     
-            queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
+        if not order_by:
+            if field == 'parceiro':
+                queryset = Cliente.objects.filter(
+                    parceiro__nome__icontains=value
+                ).order_by('id')  
+            else:     
+                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
+        else:
+            if field == 'parceiro':
+                queryset = Cliente.objects.filter(
+                    parceiro__nome__icontains=value
+                ).order_by(order_by)
+            else:
+                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
         return Response(ClienteSerializer(queryset, many=True).data)
 
 #view para buscar processos por campo específico
@@ -353,6 +359,8 @@ class BuscarProcessoCampoView(APIView):
     def get(self, request):
         field = request.query_params.get('field')
         value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
         
         if not field or not value:
             raise ValidationError({
@@ -362,16 +370,28 @@ class BuscarProcessoCampoView(APIView):
             raise ValidationError({
                 "error": f"O campo '{field}' não é permitido para busca."
             })
-        if field == 'advogadoCriadorId':
-            queryset = Processo.objects.filter(
-                advogadoCriadorId__nome__icontains=value
-            ).order_by('id')
-        elif field == 'clienteId':
-            queryset = Processo.objects.filter(
-                clienteId__nome__icontains=value
-            ).order_by('id')
+        if not order_by:
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'clienteId':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by('id')
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
         else:
-            queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'clienteId':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by(order_by)
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
         return Response(ProcessoSerializer(queryset, many=True).data)   
 
 
@@ -382,6 +402,7 @@ class BuscarTarefaCampo(APIView):
     def get(self, request):
         field = request.query_params.get('field')
         value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
         if field not in self.alowed_field:
             raise ValidationError({
                 "error": f"O campo '{field}' não é permitido para busca."
@@ -390,18 +411,32 @@ class BuscarTarefaCampo(APIView):
             raise ValidationError({
                 "error": "Os campos 'field' e 'value' são obrigatórios."
             })
-        if field == 'advogadoCriadorId':
-            queryset = Tarefas.objects.filter(
-                advogadoCriadorId__nome__icontains=value
-            ).order_by('id')
-        elif field == 'advogadoResponsavelId':
-            queryset = Tarefas.objects.filter(
-                advogadoResponsavelId__nome__icontains=value
-            ).order_by('id')
-        elif field == 'processoOrigemId':
-            queryset = Tarefas.objects.filter(
-                processoOrigemId__titulo__icontains=value
-            ).order_by('id')
+        if not order_by:
+            if field == 'advogadoCriadorId':
+                queryset = Tarefas.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'advogadoResponsavelId':
+                queryset = Tarefas.objects.filter(
+                    advogadoResponsavelId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'processoOrigemId':
+                queryset = Tarefas.objects.filter(
+                    processoOrigemId__titulo__icontains=value
+                ).order_by('id')
+        else:
+            if field == 'advogadoCriadorId':
+                queryset = Tarefas.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'advogadoResponsavelId':
+                queryset = Tarefas.objects.filter(
+                    advogadoResponsavelId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'processoOrigemId':
+                queryset = Tarefas.objects.filter(
+                    processoOrigemId__titulo__icontains=value
+                ).order_by(order_by)
         return Response(TarefasSerializer(queryset, many=True).data)
             
 @csrf_exempt
