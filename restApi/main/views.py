@@ -1219,7 +1219,7 @@ def graficoClientesParceiro(request):
     json_file = [
         {
             "parceiro": parceiro.nome,
-            "clientes": parceiro.quantidade_clientes
+            "quantidade": parceiro.quantidade_clientes
         }
         for parceiro in parceiros
     ]
@@ -1269,7 +1269,7 @@ def graficoTarefasAdvogado(request):
             count = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
             jsonFile.append({
                 "advogado": advogado.nome,
-                "tarefas": count
+                "quantidade": count
             })
         return JsonResponse(jsonFile, safe=False)
     else:
