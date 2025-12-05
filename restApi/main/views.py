@@ -105,32 +105,39 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
-        serializer = self.get_serializer(queryset, many=True)
-        page = self.paginate_queryset(queryset)
+        queryset = self.get_queryset().filter(status='ativo')
+
+        # --- Filtros ---
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
-        alowed_field = ['numeroProcesso','clienteNome','fase','status',]
-        
-        #Na refatoração precisarei fazer essa tratativa de erro, para o order_by ser baseado nos campos do modelo
-        if field in alowed_field:
-            if not order_by:
-                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
-            else:
-                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
 
+        allowed_fields = ['numeroProcesso', 'clienteNome', 'fase', 'status']
+
+        # Filtro por campo específico
+        if field and value:
+            if field in allowed_fields:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+            else:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+        # Ordenação
         if order_by:
             queryset = queryset.order_by(order_by)
-           
-        
+        else:
+            queryset = queryset.order_by('-prioritario')
+
+        # --- Paginação ---
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        return Response(ProcessoSerializer(queryset, many=True).data)
+
+        # Resposta sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
     
-    # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
-    # vou investigar o motivo
+    
     
 class GrupoAcaoViewSet(viewsets.ModelViewSet):
     queryset = GrupoAcao.objects.all()
