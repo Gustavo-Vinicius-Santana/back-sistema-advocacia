@@ -112,7 +112,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
-        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId']
+        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId','cliente']
 
         # Filtro por campo específico
         if field and value:
@@ -131,6 +131,10 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                 queryset = Processo.objects.filter(
                     advogadoCriadorId__nome__icontains=value
                 )
+            case 'cliente':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                )
         # Ordenação
         if order_by:
             queryset = queryset.order_by(order_by)
@@ -138,6 +142,10 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             queryset = queryset.order_by('clienteId__nome')
         elif order_by == 'advogadoCriadorId':
             queryset = queryset.order_by('advogadoCriadorId__nome')
+        elif order_by == 'fase':
+            queryset = queryset.order_by('fase')
+        elif order_by == 'status':
+            queryset = queryset.order_by('status')
         else:
             queryset = queryset.order_by('-prioritario')
             
