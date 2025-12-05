@@ -127,7 +127,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        return Response(serializer.data)
+        return Response(ProcessoSerializer(queryset, many=True).data)
     
     # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
     # vou investigar o motivo
