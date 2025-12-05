@@ -119,6 +119,9 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
+
+        if order_by:
+            queryset = queryset.order_by(order_by)
            
         
         if page is not None:
