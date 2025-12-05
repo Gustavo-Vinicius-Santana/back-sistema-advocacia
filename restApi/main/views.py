@@ -107,58 +107,60 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset().filter(status='ativo')
 
-        # --- Filtros ---
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
-        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId','cliente']
+        allowed_fields = [
+            'numeroProcesso',
+            'fase',
+            'status',
+            'clienteId',
+            'advogadoCriadorId'
+        ]
 
-        # Filtro por campo específico
+        # ---------------- FILTRO ----------------
         if field and value:
-            if field in allowed_fields:
-                queryset = queryset.filter(**{f"{field}__icontains": value})
-            else:
+            if field not in allowed_fields:
                 return Response({"error": "Campo de filtro inválido."}, status=400)
-        
-        #campos especiais do serializer
-        match field:
-            case 'clienteId':
-                queryset = Processo.objects.filter(
-                    clienteId__nome__icontains=value
-                )
-            case 'advogadoCriadorId':
-                queryset = Processo.objects.filter(
-                    advogadoCriadorId__nome__icontains=value
-                )
-            case 'cliente':
-                queryset = Processo.objects.filter(
-                    clienteId__nome__icontains=value
-                )
-        # Ordenação
-        if order_by:
-            queryset = queryset.order_by(order_by)
-        elif order_by == 'clienteId':
+
+            # Campos simples
+            if field in ['numeroProcesso', 'fase', 'status']:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+
+            # Campos especiais (FK)
+            elif field == 'clienteId':
+                queryset = queryset.filter(clienteId__nome__icontains=value)
+
+            elif field == 'advogadoCriadorId':
+                queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
+
+            # Alias para facilitar
+            elif field == 'cliente':
+                queryset = queryset.filter(clienteId__nome__icontains=value)
+
+        # ---------------- ORDENAÇÃO ----------------
+        if order_by == 'clienteId':
             queryset = queryset.order_by('clienteId__nome')
+
         elif order_by == 'advogadoCriadorId':
             queryset = queryset.order_by('advogadoCriadorId__nome')
-        elif order_by == 'fase':
-            queryset = queryset.order_by('fase')
-        elif order_by == 'status':
-            queryset = queryset.order_by('status')
+
+        elif order_by in ['fase', 'status']:
+            queryset = queryset.order_by(order_by)
+
+        elif order_by:
+            queryset = queryset.order_by(order_by)
+
         else:
             queryset = queryset.order_by('-prioritario')
-            
 
-        
-
-        # --- Paginação ---
+        # ---------------- PAGINAÇÃO ----------------
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        # Resposta sem paginação
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
