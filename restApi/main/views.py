@@ -108,6 +108,19 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
         serializer = self.get_serializer(queryset, many=True)
         page = self.paginate_queryset(queryset)
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        alowed_field = ['numeroProcesso','clienteNome','fase','status',]
+        
+        #Na refatoração precisarei fazer essa tratativa de erro, para o order_by ser baseado nos campos do modelo
+        if field in alowed_field:
+            if not order_by:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
+           
+        
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)

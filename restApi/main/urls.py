@@ -59,6 +59,7 @@ urlpatterns = [
     path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
     path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
     path('tarefasDeletadas/',views.tarefasDeletadas, name='tarefasDeletadas'),
+    path('tarefas/buscar/',views.BuscarTarefaCampo.as_view(), name='buscarTarefaCamposView'),   
     path('tarefasDeletadas/<int:tarefa_id>/',views.tarefasDeletadasEspecificas, name='tarefasDeletadasEspecificas'),
     path('processosArquivados/', views.processosArquivados, name='processosArquivados'),
     path('processosArquivados/<int:processo_id>/', views.processosArquivadosEspecificos, name='processosArquivadosEspecificos'),
