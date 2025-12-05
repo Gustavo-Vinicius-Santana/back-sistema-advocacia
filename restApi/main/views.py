@@ -135,7 +135,6 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             elif field == 'advogadoCriadorId':
                 queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
 
-            # Alias para facilitar
             elif field == 'cliente':
                 queryset = queryset.filter(clienteId__nome__icontains=value)
 
