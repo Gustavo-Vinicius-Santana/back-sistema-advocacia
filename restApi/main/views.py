@@ -112,7 +112,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
-        allowed_fields = ['numeroProcesso', 'clienteId.nome', 'fase', 'status','AdvogadorCriadorId']
+        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId','clienteNome']
 
         # Filtro por campo específico
         if field and value:
@@ -120,12 +120,25 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(**{f"{field}__icontains": value})
             else:
                 return Response({"error": "Campo de filtro inválido."}, status=400)
-
+        
+        #campos especiais do serializer
+        match field:
+            case 'clienteNome':
+                queryset = queryset.filter(
+                    clienteId__nome__icontains=value
+                )
+            case 'advogadoCriador':
+                queryset = queryset.filter(
+                    advogadoCriadorId__nome__icontains=value
+                )
         # Ordenação
         if order_by:
             queryset = queryset.order_by(order_by)
         else:
             queryset = queryset.order_by('-prioritario')
+            
+
+        
 
         # --- Paginação ---
         page = self.paginate_queryset(queryset)
@@ -376,7 +389,7 @@ class BuscarClienteCamposView(APIView):
 #view para buscar processos por campo específico
 class BuscarProcessoCampoView(APIView):
     permission_classes = [IsAuthenticated]
-    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId']
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
     pagination_class = standardResultsSetPagination
     
     def get(self, request):
@@ -398,12 +411,13 @@ class BuscarProcessoCampoView(APIView):
                 queryset = Processo.objects.filter(
                     advogadoCriadorId__nome__icontains=value
                 ).order_by('id')
-            elif field == 'clienteId':
+            elif field == 'clienteNome':
                 queryset = Processo.objects.filter(
                     clienteId__nome__icontains=value
                 ).order_by('id')
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
+            
         else:
             if field == 'advogadoCriadorId':
                 queryset = Processo.objects.filter(
