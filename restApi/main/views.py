@@ -112,7 +112,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
-        allowed_fields = ['numeroProcesso', 'clienteNome', 'fase', 'status']
+        allowed_fields = ['numeroProcesso', 'clienteId.nome', 'fase', 'status','AdvogadorCriadorId']
 
         # Filtro por campo específico
         if field and value:
