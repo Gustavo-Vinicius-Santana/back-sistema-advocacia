@@ -112,7 +112,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
-        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId','clienteNome']
+        allowed_fields = ['numeroProcesso', 'clienteId', 'fase', 'status','AdvogadorCriadorId']
 
         # Filtro por campo específico
         if field and value:
@@ -123,17 +123,21 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         
         #campos especiais do serializer
         match field:
-            case 'clienteNome':
+            case 'clienteId':
                 queryset = queryset.filter(
                     clienteId__nome__icontains=value
                 )
-            case 'advogadoCriador':
+            case 'advogadoCriadorId':
                 queryset = queryset.filter(
                     advogadoCriadorId__nome__icontains=value
                 )
         # Ordenação
         if order_by:
             queryset = queryset.order_by(order_by)
+        elif order_by == 'clienteId':
+            queryset = queryset.order_by('clienteId__nome')
+        elif order_by == 'advogadoCriadorId':
+            queryset = queryset.order_by('advogadoCriadorId__nome')
         else:
             queryset = queryset.order_by('-prioritario')
             
