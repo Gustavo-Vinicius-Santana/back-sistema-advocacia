@@ -124,11 +124,11 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         #campos especiais do serializer
         match field:
             case 'clienteId':
-                queryset = queryset.filter(
+                queryset = Cliente.objects.filter(
                     clienteId__nome__icontains=value
                 )
             case 'advogadoCriadorId':
-                queryset = queryset.filter(
+                queryset = Advogado.objects.filter(
                     advogadoCriadorId__nome__icontains=value
                 )
         # Ordenação
