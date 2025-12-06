@@ -57,6 +57,33 @@ class ClienteViewSet(viewsets.ModelViewSet):
             )
         ).order_by('-prioridade', 'id')
         
+        #Parametros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+
+        allowed_fields = [
+            'nome','cpf','telefone','inss','parceiro'
+            ]
+        
+        if field and value:
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Campos simples
+            if field in ['nome', 'cpf', 'telefone', 'inss']:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+
+            # Campo composto (parceiro)
+            elif field == 'parceiro':
+                queryset = queryset.filter(parceiro__nome__icontains=value)
+        if order_by:
+            if order_by == 'parceiro':
+                queryset = queryset.order_by('parceiro__nome')
+            else:
+                queryset = queryset.order_by(order_by)
+        
+        
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -75,7 +102,8 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
     permission_classes = [IsAuthenticated]
-  
+    
+
   
 class ParceirosViewSet(viewsets.ModelViewSet):
     queryset = Parceiros.objects.all()
@@ -216,6 +244,45 @@ class TarefasViewSet(viewsets.ModelViewSet):
         ).exclude(status='concluida').update(status='em aberto')
 
         return Tarefas.objects.filter(concluida=False,deletada=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        #Parametros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        alowed_fields = [
+            'advogadoCriadorId',
+            'advogadoResponsavelId',
+            'processoOrigemId'
+        ]
+        
+        if field and value:
+            #campos compostos (FK)
+            if field not in alowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+            match field:
+                case 'advogadoCriadorId':
+                    queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
+                case 'advogadoResponsavelId':
+                    queryset = queryset.filter(advogadoResponsavelId__nome__icontains=value)
+                case 'processoOrigemId':
+                    queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
+        
+        #Validando os parametros de ordenação
+        if order_by:
+            if order_by == 'advogadoCriadorId':
+                queryset = queryset.order_by('advogadoCriadorId__nome')
+            elif order_by == 'advogadoResponsavelId':
+                queryset =queryset .order_by('advogadoResponsavelId__nome')
+            elif order_by == 'processoOrigemId':
+                queryset =queryset .order_by('processoOrigemId__numeroProcesso')
+            else:
+                queryset =queryset .order_by(order_by)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
     def create(self, request, *args, **kwargs):
         hoje = timezone.localdate()
         data = request.data.copy()
