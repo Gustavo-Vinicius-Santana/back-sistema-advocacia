@@ -374,7 +374,37 @@ class TarefasViewSet(viewsets.ModelViewSet):
 class TipoTarefaViewSet(viewsets.ModelViewSet):
     queryset = TipoTarefa.objects.all()
     serializer_class = TipoTarefaSerializer
-    permission_classes= [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        # Parâmetros de pesquisa e ordenação
+        search = request.query_params.get('search')
+        order_by = request.query_params.get('order_by')
+        
+        # Filtro por nome se houver parâmetro 'search'
+        if search:
+            queryset = queryset.filter(nome__icontains=search)
+        
+        # Ordenação
+        if order_by:
+            if order_by == 'nome':
+                queryset = queryset.order_by(order_by)
+            else:
+                return Response({"error": "Campo de ordenação inválido. Use 'nome'."}, status=400)
+        else:
+            # Ordenação padrão por nome
+            queryset = queryset.order_by('nome')
+        
+        # Paginação
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
     
