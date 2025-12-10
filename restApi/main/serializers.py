@@ -4,7 +4,7 @@ from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
     representanteNome = serializers.CharField(source='representante.nome', read_only=True)
-    parceiro = serializers.CharField(required=False, allow_blank=True)
+    parceiroNome = serializers.CharField(source='parceiro.nome', read_only=True)
 
     class Meta:
         model = Cliente
@@ -110,7 +110,7 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
 class AdvogadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advogado
-        fields = ['id','nome','telefone','email','oab','is_active','is_staff','is_superuser','is_online','last_login']
+        fields = ['id','nome','telefone','email','foto','oab','is_active','is_staff','is_superuser','is_online','last_login']
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -130,8 +130,34 @@ class ProcessoSerializer(serializers.ModelSerializer):
     clienteNome = serializers.CharField(source='clienteId.nome',read_only=True)
     dataContrato = serializers.DateTimeField()
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
+    grupoAcaoNome = serializers.CharField(source='grupoAcao.nome',read_only=True)
+    faseNome = serializers.CharField(source='fase.nome',read_only=True)
     class Meta:
         model = Processo
+        fields = '__all__'
+        
+        
+class GrupoAcaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GrupoAcao
+        fields = '__all__'
+
+
+class TipoAcaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoAcao
+        fields = '__all__'
+        
+        
+class FaseProcessoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FaseProcesso
+        fields = '__all__'
+        
+        
+class EtapaProcessoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EtapaProcesso
         fields = '__all__'
 
 
@@ -139,6 +165,7 @@ class TarefasSerializer(serializers.ModelSerializer):
     processoOrigemNumero = serializers.CharField(source='processoOrigemId.numeroProcesso',read_only=True)
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
+    tipoTarefaNome = serializers.CharField(source='tipoTarefa.nome',read_only=True)
     clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
     prazoFinal = serializers.DateTimeField(input_formats=['%Y-%m-%d'])
     dataInicio = serializers.DateTimeField(read_only=True)
@@ -146,6 +173,13 @@ class TarefasSerializer(serializers.ModelSerializer):
         model = Tarefas
         fields = '__all__'
         
+
+class TipoTarefaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoTarefa
+        fields = '__all__'
+
+
         
 class HistoricoTarefasSerializer(serializers.ModelSerializer):
     tarefaId = serializers.IntegerField(source='tarefaId.id',read_only=True)
@@ -161,4 +195,19 @@ class HistoricoTarefasSerializer(serializers.ModelSerializer):
 class DocumentosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Documentos
+        fields = '__all__'
+        
+
+class ArquivoModelSerializer(serializers.ModelSerializer):
+    clienteNome = serializers.CharField(source='cliente_id.nome', read_only=True)
+    class Meta:
+        model = ArquivoModel
+        fields = '__all__'
+        
+        
+        
+class ArquivoTarefaSerializer(serializers.ModelSerializer):
+    tarefaNome = serializers.CharField(source='tarefa_id.nome', read_only=True)
+    class Meta:
+        model = ArquivoTarefa
         fields = '__all__'

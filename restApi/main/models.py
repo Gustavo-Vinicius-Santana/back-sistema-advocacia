@@ -1,16 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
 
-
-def caminho_imagem(instance, filename):
-    return f'clientes/{filename}'
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
     telefone = models.CharField(max_length=20, unique=True)
     dataNascimento = models.DateField(blank=True, null=True)
     profissao = models.CharField(max_length=255,blank=True)
-    parceiro = models.CharField(max_length=255,blank=True) 
     inss = models.CharField(max_length=255,blank=True)
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
@@ -18,15 +14,16 @@ class Cliente(models.Model):
     contactadoPor = models.CharField(max_length=255,blank=True)
     motivo = models.TextField(blank=True)
     rua = models.CharField(max_length=255,blank=True)
-    numero = models.IntegerField(default=0)
+    numero = models.IntegerField(null=True)
     cidade = models.CharField(max_length=255,blank=True)
     estado = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
-    foto = models.ImageField(upload_to=caminho_imagem, default='clientes/default.jpg', blank=True, null=True)
+    foto = models.URLField(max_length=500, blank=True, null=True)
     contactado = models.BooleanField(default=False)
+    parceiro = models.ForeignKey("Parceiros", on_delete=models.SET_NULL, null=True, blank=True, related_name="clientes")
     """o Django não consegue criar campos apos a leitura da classe, então o
-    campo motivo deve ser criado e ignorado caso contrato for TRUE,
+    campo motivo deve ser criado e ignorado caso c/ontrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.
     #Atualização: 14/07/2025 Contrato e motivo foram removidos"""
     
@@ -43,14 +40,14 @@ class Cliente(models.Model):
 class Representante(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20,unique=True)
-    cpf = models.CharField(max_length=14,unique=True)
-    cep = models.CharField(max_length=10)
+    cpf = models.CharField(max_length=14,unique=True,blank = True)
+    cep = models.CharField(max_length=10,blank = True)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
-    rua = models.CharField(max_length=255)
-    numero = models.IntegerField(default=0)
-    cidade = models.CharField(max_length=255)
-    estado = models.CharField(max_length=255)
-    bairro = models.CharField(max_length=255)
+    rua = models.CharField(max_length=255,blank = True)
+    numero = models.IntegerField(default=0,blank = True)
+    cidade = models.CharField(max_length=255,blank = True)
+    estado = models.CharField(max_length=255,blank = True)
+    bairro = models.CharField(max_length=255,blank = True)
     complemento = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
 
@@ -61,7 +58,7 @@ class ClienteEspera(models.Model):
     observacoes = models.TextField(blank=True)
     IdAdvogado = models.IntegerField(default=0)
     cpf = models.CharField(max_length=14, blank=True,unique=True)
-    dataNascimento = models.DateField(blank=True)
+    dataNascimento = models.DateField(blank=True,default='2000-01-01')
 
 #Comentando para teste de commit 
 
@@ -94,7 +91,8 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
-    oab = models.CharField(max_length=20, default='Nenhuma OAB')
+    oab = models.CharField(max_length=20, default='Nenhuma OAB',blank=True,null=True)
+    foto = models.URLField(max_length=500, blank=True, null=True)
     #Django pede essas paradas pra o login, o nome é autoexplicativo
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -159,38 +157,71 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
 
 
 class Processo(models.Model):
+    titulo = models.CharField(max_length=255,blank=True)
     numeroProcesso = models.CharField(max_length=50, unique=True)
     STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
     status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='ativo')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
-    grupoAcao=  models.CharField(max_length=50,default="Sem grupo")
+    grupoAcao=  models.ForeignKey('GrupoAcao', on_delete=models.PROTECT)
+    tipoAcao = models.ForeignKey('TipoAcao', on_delete=models.PROTECT, blank=True)
+    fase = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
+    etapa = models.ForeignKey('EtapaProcesso', on_delete=models.PROTECT, blank=True)
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
     CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
     classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
-    descricao = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
     concluido = models.BooleanField(default=False)
     
+
+class GrupoAcao(models.Model):
+    nome = models.CharField(max_length=100)
+    def __str__(self):
+        return self.nome
+
+class TipoAcao(models.Model):
+    nome = models.CharField(max_length=100)
+    grupoAcao = models.ForeignKey('GrupoAcao', on_delete=models.CASCADE)
+    def __str__(self):
+        return self.nome
         
+
+class FaseProcesso(models.Model):
+    nome = models.CharField(max_length=100)
+    def __str__(self):
+        return self.nome
+
+class EtapaProcesso(models.Model):
+    nome = models.CharField(max_length=100)
+    faseProcesso = models.ForeignKey('FaseProcesso', on_delete=models.CASCADE)
+    def __str__(self):
+        return self.nome
 
 class Tarefas(models.Model):
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
-    tipoTarefa = models.CharField(max_length=50)
-    descricao = models.CharField(max_length=255,blank=True) #vai se atualizar timeline
+    tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT, null=True, blank=True)
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
     urgente = models.BooleanField(default=False,blank=True)
+    arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
     concluida = models.BooleanField(default=False,blank=True)
     deletada = models.BooleanField(default=False)
     deletadaPor = models.CharField(max_length=255, default="Ninguem", blank=True)
     STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
     status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
-    observacoes = models.TextField(default="Nenhuma observação.", blank=True)
-        
+    observacoes = models.TextField(blank=True)
+
+
+
+class TipoTarefa(models.Model):
+    nome = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.nome        
         
 class HistoricoTarefas(models.Model):
     tarefaId = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
@@ -206,3 +237,17 @@ class Documentos(models.Model):
     nome = models.CharField(max_length=100)
     tipo = models.CharField(max_length=100)
     documento = models.TextField()
+
+
+
+class ArquivoModel(models.Model):
+    cliente_id = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255,default='Sem nome')
+    arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front
+    
+    
+
+class ArquivoTarefa(models.Model):
+    tarefa_id = models.ForeignKey(Tarefas, on_delete=models.CASCADE)
+    nome = models.CharField(max_length=255,default='Sem nome')
+    arquivo = models.TextField() #Vai armazenar o URL do arquivo que fara a renderização no front

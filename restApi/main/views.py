@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 from django.views.decorators.csrf import csrf_exempt
@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, Count
 import json
 import jwt
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -20,37 +20,75 @@ from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta, datetime, time
 from dateutil.relativedelta import relativedelta
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
 
 
 
+
+
+class standardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
         dataAtual = timezone.now().date()
 
-        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
-        dataInicio = dataAtual - relativedelta(years=65)
-        dataFim = dataAtual - relativedelta(years=65, days=-5)
+        # Intervalo para quem está dentro de ±5 dias de completar 65 anos
+        data65 = dataAtual - relativedelta(years=65)
+        dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
+        dataFim = data65 + relativedelta(days=5)     # vai fazer (até 5 dias à frente)
 
-        queryset = self.get_queryset().annotate(
+        queryset = self.get_queryset().filter(contrato=True).annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
-                    contrato=True,
                     then=Value(1)
                 ),
                 default=Value(0),
                 output_field=IntegerField()
             )
-        ).order_by('-prioridade','id')
-        for c in queryset:
-            print(c.nome, c.dataNascimento, c.prioridade)
-
+        ).order_by('-prioridade', 'id')
         
+        #Parametros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+
+        allowed_fields = [
+            'nome','cpf','telefone','inss','parceiro'
+            ]
+        
+        if field and value:
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Campos simples
+            if field in ['nome', 'cpf', 'telefone', 'inss']:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+
+            # Campo composto (parceiro)
+            elif field == 'parceiro':
+                queryset = queryset.filter(parceiro__nome__icontains=value)
+        if order_by:
+            if order_by == 'parceiro':
+                queryset = queryset.order_by('parceiro__nome')
+            else:
+                queryset = queryset.order_by(order_by)
+        
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -64,7 +102,8 @@ class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
     permission_classes = [IsAuthenticated]
-  
+    
+
   
 class ParceirosViewSet(viewsets.ModelViewSet):
     queryset = Parceiros.objects.all()
@@ -78,10 +117,6 @@ class EscritoriosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]  
 
 
-def get_id_from_token(token):
-    token_format = token.split(' ')[1]
-    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-    return payload.get('user_id')
 
 
     
@@ -95,43 +130,169 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     queryset = Processo.objects.all()
     serializer_class = ProcessoSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset().order_by('-prioritario').filter(status = 'ativo')
+        queryset = self.get_queryset().filter(status='ativo')
+
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+
+        allowed_fields = [
+            'numeroProcesso',
+            'fase',
+            'status',
+            'clienteId',
+            'advogadoCriadorId'
+        ]
+
+        # ---------------- FILTRO ----------------
+        if field and value:
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Campos simples
+            if field in ['numeroProcesso', 'fase', 'status']:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+
+            # Campos especiais (FK)
+            elif field == 'clienteId':
+                queryset = queryset.filter(clienteId__nome__icontains=value)
+
+            elif field == 'advogadoCriadorId':
+                queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
+
+            elif field == 'cliente':
+                queryset = queryset.filter(clienteId__nome__icontains=value)
+
+        # ---------------- ORDENAÇÃO ----------------
+        if order_by == 'clienteId':
+            queryset = queryset.order_by('clienteId__nome')
+
+        elif order_by == 'advogadoCriadorId':
+            queryset = queryset.order_by('advogadoCriadorId__nome')
+
+        elif order_by in ['fase', 'status']:
+            queryset = queryset.order_by(order_by)
+
+        elif order_by:
+            queryset = queryset.order_by(order_by)
+
+        else:
+            queryset = queryset.order_by('-prioritario')
+
+        # ---------------- PAGINAÇÃO ----------------
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
-    # com o class meta não funcionou, mas sobrescrevendo o list sim... ???
-    # vou investigar o motivo
     
     
+class GrupoAcaoViewSet(viewsets.ModelViewSet):
+    queryset = GrupoAcao.objects.all()
+    serializer_class = GrupoAcaoSerializer
+    permission_classes = [IsAuthenticated]  
+
+
+class TipoAcaoViewSet(viewsets.ModelViewSet):
+    queryset = TipoAcao.objects.all()
+    serializer_class = TipoAcaoSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
+class FaseProcessoViewSet(viewsets.ModelViewSet):
+    queryset = FaseProcesso.objects.all()
+    serializer_class = FaseProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
+class EtapaProcessoViewSet(viewsets.ModelViewSet):
+    queryset = EtapaProcesso.objects.all()
+    serializer_class = EtapaProcessoSerializer
+    permission_classes = [IsAuthenticated]
     
 class TarefasViewSet(viewsets.ModelViewSet):
     queryset = Tarefas.objects.all()
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
+
     def get_queryset(self):
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
         limite = datetime.combine(data_limite, time.max)  # até 23:59:59
 
-        # 1 - Atrasadas (somente antes de hoje)
+        # 1 - Atualiza atrasadas
         Tarefas.objects.filter(
             prazoFinal__lt=hoje
         ).exclude(status='concluida').update(status='atrasada')
 
-        # 2 - Perto do prazo (inclui hoje até 3 dias depois)
+        # 2 - Atualiza perto do prazo (hoje até +3 dias)
         Tarefas.objects.filter(
             prazoFinal__gte=hoje,
             prazoFinal__lte=limite
         ).exclude(status='concluida').update(status='perto do prazo')
 
-        # 3 - Em aberto (prazo maior que 3 dias)
+        # 3 - Atualiza em aberto (> 3 dias)
         Tarefas.objects.filter(
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        return Tarefas.objects.filter(concluida=False,deletada=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
+        # Filtra tarefas visíveis
+        return (
+            Tarefas.objects
+            .filter(concluida=False, deletada=False)
+            .order_by('-urgente', 'prazoFinal')
+        )
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        #Parametros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        alowed_fields = [
+            'advogadoCriadorId',
+            'advogadoResponsavelId',
+            'processoOrigemId'
+        ]
+        
+        if field and value:
+            #campos compostos (FK)
+            if field not in alowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+            match field:
+                case 'advogadoCriadorId':
+                    queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
+                case 'advogadoResponsavelId':
+                    queryset = queryset.filter(advogadoResponsavelId__nome__icontains=value)
+                case 'processoOrigemId':
+                    queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
+        
+        #Validando os parametros de ordenação
+        if order_by:
+            if order_by == 'advogadoCriadorId':
+                queryset = queryset.order_by('advogadoCriadorId__nome')
+            elif order_by == 'advogadoResponsavelId':
+                queryset =queryset .order_by('advogadoResponsavelId__nome')
+            elif order_by == 'processoOrigemId':
+                queryset =queryset .order_by('processoOrigemId__numeroProcesso')
+            else:
+                queryset =queryset .order_by(order_by)
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
     def create(self, request, *args, **kwargs):
         hoje = timezone.localdate()
         data = request.data.copy()
@@ -142,9 +303,15 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
             }
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
-        
+        tiposLista = TipoTarefa.objects.all() 
+        tipos = []
+        for e in tiposLista:
+            tipos.append(e.nome)
         serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response({'error': str(e),'tipos disponíveis':tipos}, status=status.HTTP_400_BAD_REQUEST)
         self.perform_create(serializer)
         
         headers = self.get_success_headers(serializer.data)
@@ -202,6 +369,42 @@ class TarefasViewSet(viewsets.ModelViewSet):
         
 
         return response
+    
+
+class TipoTarefaViewSet(viewsets.ModelViewSet):
+    queryset = TipoTarefa.objects.all()
+    serializer_class = TipoTarefaSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        # Parâmetros de pesquisa e ordenação
+        search = request.query_params.get('search')
+        order_by = request.query_params.get('order_by')
+        
+        # Filtro por nome se houver parâmetro 'search'
+        if search:
+            queryset = queryset.filter(nome__icontains=search)
+        
+        # Ordenação
+        if order_by:
+            if order_by == 'nome':
+                queryset = queryset.order_by(order_by)
+            else:
+                return Response({"error": "Campo de ordenação inválido. Use 'nome'."}, status=400)
+        else:
+            # Ordenação padrão por nome
+            queryset = queryset.order_by('nome')
+        
+        # Paginação
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
     
@@ -212,11 +415,43 @@ class DocumentosViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]    
     
     
+class ArquivoModelViewSet(viewsets.ModelViewSet):
+    queryset = ArquivoModel.objects.all()
+    serializer_class = ArquivoModelSerializer
+    permission_classes = [IsAuthenticated]
+
+    
+class ArquivoTarefaViewSet(viewsets.ModelViewSet):
+    queryset = ArquivoTarefa.objects.all()
+    serializer_class = ArquivoTarefaSerializer
+    permission_classes = [IsAuthenticated]
+    
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
                     
-                    
+class ArquivoModelClienteIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, cliente):
+        try:
+            arquivos = ArquivoModel.objects.filter(cliente_id=cliente)
+        except ArquivoModel.DoesNotExist:
+            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
+        serializer = ArquivoModelSerializer(arquivos, many=True)
+        return Response(serializer.data)  
+
+class ArquivoTarefaIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, tarefa):
+        try:
+            arquivos = ArquivoTarefa.objects.filter(tarefa_id=tarefa)
+        except ArquivoTarefa.DoesNotExist:
+            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
+        serializer = ArquivoTarefaSerializer(arquivos, many=True)
+        return Response(serializer.data)  
+
                     
 class AdvogadosOnlineView(APIView):
     permission_classes = [IsAuthenticated]
@@ -238,6 +473,129 @@ class AdvogadoLogoutView(APIView):
         #implementar o logout baseado no tempo do Token JWT
 
 
+class BuscarClienteCamposView(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['nome','cpf','telefone','inss','parceiro']
+    pagination_class = standardResultsSetPagination
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        if not field or not value: 
+            raise ValueError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field not in self.alowed_field:
+            raise ValueError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if not order_by:
+            if field == 'parceiro':
+                queryset = Cliente.objects.filter(
+                    parceiro__nome__icontains=value
+                ).order_by('id')  
+            else:     
+                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
+        else:
+            if field == 'parceiro':
+                queryset = Cliente.objects.filter(
+                    parceiro__nome__icontains=value
+                ).order_by(order_by)
+            else:
+                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
+        return Response(ClienteSerializer(queryset, many=True).data)
+
+#view para buscar processos por campo específico
+class BuscarProcessoCampoView(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
+    pagination_class = standardResultsSetPagination
+    
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field not in self.alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if not order_by:
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by('id')
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
+            
+        else:
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'clienteId':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by(order_by)
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
+        return Response(ProcessoSerializer(queryset, many=True).data)   
+
+
+class BuscarTarefaCampo(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['advogadoCriadorId','advogadoResponsavelId','processoOrigemId']
+
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        if field not in self.alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if not order_by:
+            if field == 'advogadoCriadorId':
+                queryset = Tarefas.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'advogadoResponsavelId':
+                queryset = Tarefas.objects.filter(
+                    advogadoResponsavelId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'processoOrigemId':
+                queryset = Tarefas.objects.filter(
+                    processoOrigemId__titulo__icontains=value
+                ).order_by('id')
+        else:
+            if field == 'advogadoCriadorId':
+                queryset = Tarefas.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'advogadoResponsavelId':
+                queryset = Tarefas.objects.filter(
+                    advogadoResponsavelId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'processoOrigemId':
+                queryset = Tarefas.objects.filter(
+                    processoOrigemId__titulo__icontains=value
+                ).order_by(order_by)
+        return Response(TarefasSerializer(queryset, many=True).data)
+            
 @csrf_exempt
 @action(detail=True, methods=['post'])
 def registrarAdv(request):
@@ -255,20 +613,22 @@ def registrarAdv(request):
     email = data.get('email')
     password = data.get('password')
     oab = data.get('oab')
-    
+    foto = data.get('foto')  # ✅ novo campo
+
     if not nome or not email:
-        return JsonResponse ({"error": "Nome e email são obrigatórios."}, status=400)
-    
+        return JsonResponse({"error": "Nome e email são obrigatórios."}, status=400)
+
     advogado = Advogado.objects.create(
         nome=nome, 
         telefone=telefone,
         email=email,
-        oab = oab,
-        password=password
-        )
+        oab=oab,
+        foto=foto  # ✅ salva a URL da foto
+    )
     advogado.set_password(password)
     advogado.save()
-    return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)    
+
+    return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)
 """BUG no Login,02/06/2025
 Descrição: O login diz que não existe usuário cadastrado com esse email, 
 preciso debugar mais calmamente.
@@ -285,13 +645,37 @@ def emailRequestSenha(request):
         refresh = RefreshToken.for_user(user)
         refresh["purpose"] = "reset_password" 
         print(refresh)
-        emailSender = EmailSender('empresadoth@gmail.com')
+        emailSender = EmailSender(email)
         emailSender.startserver()
-        message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:8000/resetPassword/{refresh}'
+        message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:3000/recovery/newPassword/{refresh}'
         emailSender.sendMensage('Resetar Senha', message)
         return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+def get_id_from_token(token):
+    token_format = token.split(' ')[1]
+    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
+    
+def validate_reset_token(token):
+    try:
+        refresh = RefreshToken(token)
+        if refresh.payload.get("purpose") != "reset_password":
+            return False
+        return True
+    except InvalidTokenError:
+        return False
+
+        
+def validate_reset_token_endpoint(request,token):
+    try:
+        refresh = RefreshToken(token)
+        if refresh.payload.get("purpose") != "reset_password":
+            return JsonResponse({'valid': False}, status=200)
+        return JsonResponse({'valid': True}, status=200)
+    except InvalidTokenError:
+        return JsonResponse({'valid': False}, status=200)
     
 
 @csrf_exempt
@@ -299,11 +683,17 @@ def resetPassword(request, token):
     if request.method == 'POST':
         data = json.loads(request.body)
         password = data.get('password')
-        refresh = RefreshToken(token)
+        if not validate_reset_token(token):
+            return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
+        try:
+            refresh = RefreshToken(token)
+        except InvalidTokenError:
+            return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
         advogado = refresh.payload['user_id']
         advogado = Advogado.objects.get(id=advogado)
         advogado.set_password(password)
         advogado.save()
+        refresh.blacklist()
         return JsonResponse({'message': 'senha resetada com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
@@ -324,17 +714,28 @@ def processosClientes(request,cliente_id):
         processos = Processo.objects.filter(clienteId=cliente)
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
-        advogadCriadorNome = get_object_or_404(Advogado, id=jsonFile[0]['advogadoCriadorId'])
-        if jsonFile:
-            try:
-                jsonFile[0]['advogadCriadorNome']= advogadCriadorNome.nome
-                jsonFile[0]['clienteNome'] = cliente.nome
-            except:
-                jsonFile[0]['advogadCriadorNome']= 'Não encontrados'
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
         
+        
+
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def processosClientesNome(request,cliente_nome):
+    if request.method == 'GET':
+        if not cliente_nome:
+            return JsonResponse({'error': 'Nome do cliente obrigatório.'}, status=400)
+        clientes = Cliente.objects.filvter(nome__icontains=cliente_nome)
+        if clientes is None: 
+            return JsonResponse({'error': 'Nenhum cliente encontrado com esse nome.'}, status=404)
+        processos = Processo.objects.filter(clienteId__in=clientes)
+        clienteSerializer = ClienteSerializer(clientes, many=True)
+        processosSerializer = ProcessoSerializer(processos, many=True)
+        jsonFile = {'clientes': clienteSerializer.data, 'processos': processosSerializer.data}
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 
 @permission_classes([IsAuthenticated])
@@ -438,7 +839,24 @@ def clientes65(request):
 @csrf_exempt
 def clientesSemContrato(request):
     if request.method == 'GET':
-        clientes = Cliente.objects.filter(contrato = False)
+        dataAtual = timezone.now().date()
+
+        # intervalo de nascimentos para quem fará 65 anos em até 5 dias
+        data65 = dataAtual - relativedelta(years=65)
+        dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
+        dataFim = data65 + relativedelta(days=5) 
+
+        clientes = Cliente.objects.filter(contrato = False).annotate(
+            prioridade=Case(
+                When(
+                    dataNascimento__range=(dataInicio, dataFim),
+                    then=Value(1)
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).order_by('-prioridade','id')
+   
         serializer = ClienteSerializer(clientes, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -468,12 +886,15 @@ def tarefasProcesso(request,processo_id):
         
 
 
+# editador por dennis
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def tarefasDeletadas(request):
     if request.method == 'GET':
         tarefas = Tarefas.objects.filter(deletada=True)
-        if tarefas is None:
+        try:
+            tarefas = Tarefas.objects.filter(deletada=True)
+        except:
             return JsonResponse({'error': 'Nenhuma tarefa deletada encontrada.'}, status=404)
         serializer = TarefasSerializer(tarefas, many=True)
         jsonFile = serializer.data
@@ -608,7 +1029,12 @@ def historicoTarefasEspecificos(request,tarefa_id):
 @csrf_exempt
 def historicoTarefas(request):
     if request.method == 'GET':
-        historico = HistoricoTarefas.objects.all()
+    
+        try:
+            historico = HistoricoTarefas.objects.all()  
+        except HistoricoTarefas.DoesNotExist:
+            return JsonResponse({'error': 'Histórico não encontrado.'}, status=404)
+    
         serializer = HistoricoTarefasSerializer(historico, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -633,6 +1059,8 @@ def processosAdvogado(request,advogado_id):
     else:
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
     
+
+
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt
@@ -722,20 +1150,29 @@ def tarefasAdvogadoCriador(request,advogado_id):
             return JsonResponse({'error': 'Advogado nao encontrado.'})
         if not tarefas:
             return JsonResponse({'error': 'Nenhuma tarefa encontrada com esse advogado.'})
-        serializer = TarefasSerializer(tarefas, many=True)
+        tarefasOrdenadas = tarefas.order_by('-urgente','prazoFinal')
+        serializer = TarefasSerializer(tarefasOrdenadas, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error' : 'Método não permitido.'}, status=405)
 
 
+# editado por dennis
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def advogadosDashboard(request,advogado_id):
     if request.method == 'GET':
         if not advogado_id:
             return JsonResponse({'error': 'ID do advogado é obrigatório.'},status=400)
-        tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
+        try:
+            advogado = Advogado.objects.get(id=advogado_id)
+        except Advogado.DoesNotExist:
+            return JsonResponse({'error': 'Advogado nao encontrado.'},status=404)
+        try:
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
+        except:
+            return JsonResponse({'error': 'Advogado nao encontrado.'},status=404)
         processosAtivos = Processo.objects.filter(advogadoCriadorId=advogado_id, status='ativo').exclude(concluido=True).count()
         
         if not tarefas.exists():
@@ -802,7 +1239,8 @@ def clientesEsperaAdv(request,advogado_id):
                     'telefone': cliente.telefone,
                     'observacoes': cliente.observacoes,
                     'IdAdvogado': cliente.IdAdvogado,
-                    'cpf': cliente.cpf
+                    'cpf': cliente.cpf,
+                    'dataNascimento':cliente.dataNascimento
                 }
                 clientesEsperaAdv.append(cliente_data)
             return JsonResponse(clientesEsperaAdv, safe=False)
@@ -810,3 +1248,253 @@ def clientesEsperaAdv(request,advogado_id):
             return JsonResponse({'error': 'Nenhum cliente encontrado.'}, status=404)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)        
+
+
+
+# Conjunto de funções para métricas dos gráficos
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoProcessosTipo(request):
+    if request.method == 'GET':
+        processosRuins = Processo.objects.filter(classificacao = 'ruim').count()
+        processosRegulares = Processo.objects.filter(classificacao = 'regular').count()
+        processosBons = Processo.objects.filter(classificacao = 'bom').count()
+        processosExcelentes = Processo.objects.filter(classificacao = 'excelente').count()
+
+        jsonFile = [
+            {
+                "classificacao":"ruim",
+                "quantidade":processosRuins,
+            },
+            {
+                "classificacao":"regular",
+                "quantidade":processosRegulares,
+            },
+            {
+                "classificacao":"bom",
+                "quantidade":processosBons,
+            },
+            {
+                "classificacao":"excelente",
+                "quantidade":processosExcelentes,
+            }
+
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoProcessosGrupo(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    # Agrupa e conta processos por grupo
+    grupos = (
+        GrupoAcao.objects
+        .annotate(quantidade=Count('processo'))
+        .values('nome', 'quantidade')
+    )
+
+    # Ajusta a estrutura do JSON
+    json_file = [
+        {
+            "grupo": g['nome'],
+            "quantidade": g['quantidade']
+        }
+        for g in grupos
+    ]
+
+    return JsonResponse(json_file, safe=False)
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficosProcessosFase(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    try:
+        # Agrupa e conta processos por fase
+        fases = (
+            FaseProcesso.objects
+            .annotate(quantidade=Count('processo'))  # Conta os processos relacionados
+            .values('nome', 'quantidade')
+            .order_by('nome')
+        )
+
+        # Estrutura do JSON
+        json_data = [
+            {
+                "fase": fase['nome'],
+                "quantidade": fase['quantidade']
+            }
+            for fase in fases
+        ]
+
+        return JsonResponse(json_data, safe=False)
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])        
+def graficosProcessosProtocolarPeticionar(request):
+    if request.method == 'GET':
+        try:
+            # Filtro case-insensitive para evitar problemas com maiúsculas/minúsculas
+            processosProtocolar = Processo.objects.filter(tipoAcao__nome__iexact='protocolar').count()
+            processosPeticionar = Processo.objects.filter(tipoAcao__nome__iexact='peticionar').count()
+
+            jsonFile = [
+                {
+                    "categoria": "tipo_acao",
+                    "protocolar": processosProtocolar,    
+                    "peticionar": processosPeticionar,           
+                },
+            ]
+            return JsonResponse(jsonFile, safe=False)
+        
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])        
+def graficoProcessosStatus(request):
+    if request.method == 'GET':
+        processosStatusAtivo = Processo.objects.filter(status = 'ativo').count()
+        processoStatusArquivados = Processo.objects.filter(status = 'arquivado').count()
+        jsonFile = [
+            {
+            "categoria":"atual",
+            "ativos":processosStatusAtivo,    
+            "arquivados":processoStatusArquivados,           
+            },
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoClientesContrato(request):
+    if request.method == 'GET':
+        clientesComContrato = Cliente.objects.filter(contrato = True).count()
+        clientesSemContrato = Cliente.objects.filter(contrato = False).count()
+
+        jsonFile = [
+            {
+                "categoria": "clientes",
+                "comContrato": clientesComContrato,
+                "semContrato": clientesSemContrato
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoClientesParceiro(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+    parceiros = Parceiros.objects.annotate(quantidade_clientes=Count('clientes'))
+    
+    json_file = [
+        {
+            "parceiro": parceiro.nome,
+            "quantidade": parceiro.quantidade_clientes
+        }
+        for parceiro in parceiros
+    ]
+
+    return JsonResponse(json_file, safe=False)
+
+        
+# editado por dennis
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoTarefasStatus(request):
+    if request.method == 'GET':
+        try:
+            tarefasConcluidas = Tarefas.objects.filter(concluida = True).count()
+        except:
+            tarefasConcluidas = 0
+        try:
+            tarefasEmAberto = Tarefas.objects.filter(concluida = False).count()
+        except:
+            tarefasEmAberto = 0
+        jsonFile = [
+            {
+            "status":"concluidas",
+            "quantidade":tarefasConcluidas,               
+            },
+            {
+            "status":"em aberto",
+            "quantidade":tarefasEmAberto,
+            }
+        ]
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+# editado por dennis
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def graficoTarefasAdvogado(request):
+    if request.method == 'GET':
+        try:
+            advogados = Advogado.objects.all()
+        except:
+            return JsonResponse({'error': 'Nenhum advogado encontrado.'}, status=404)
+        
+        jsonFile = []
+        for advogado in advogados:
+            count = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
+            jsonFile.append({
+                "advogado": advogado.nome,
+                "quantidade": count
+            })
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    
+# editado por dennis    
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def etapasPorFase(request,fase_id):
+    if request.method == 'GET':
+        try:
+            etapas = EtapaProcesso.objects.filter(faseProcesso=fase_id)
+        except EtapaProcesso.DoesNotExist:
+            return JsonResponse({'error': 'Etapas nao encontradas.'}, status=404)
+        
+        serializer = EtapaProcessoSerializer(etapas, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+
+# editado por dennis
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def tipoPorGrupo(request,grupo_id):
+    if request.method == 'GET':
+        try:
+            tipo = TipoAcao.objects.filter(grupoAcao=grupo_id)
+        except TipoAcao.DoesNotExist:
+            return JsonResponse({'error': 'Tipo nao encontrado.'}, status=404)
+        serializer = TipoAcaoSerializer(tipo, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)

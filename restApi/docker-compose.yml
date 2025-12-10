@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  django:
+    build: .
+    container_name: restapi_django
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER=1
+      - POSTGRES_DB=restapi
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app 
+    depends_on:
+      - db
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+  db:
+    image: postgres:16
+    container_name: restapi_postgres
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=restapi
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
