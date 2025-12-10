@@ -221,29 +221,34 @@ class TarefasViewSet(viewsets.ModelViewSet):
     serializer_class = TarefasSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = standardResultsSetPagination
-    
+
     def get_queryset(self):
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
         limite = datetime.combine(data_limite, time.max)  # até 23:59:59
 
-        # 1 - Atrasadas (somente antes de hoje)
+        # 1 - Atualiza atrasadas
         Tarefas.objects.filter(
             prazoFinal__lt=hoje
         ).exclude(status='concluida').update(status='atrasada')
 
-        # 2 - Perto do prazo (inclui hoje até 3 dias depois)
+        # 2 - Atualiza perto do prazo (hoje até +3 dias)
         Tarefas.objects.filter(
             prazoFinal__gte=hoje,
             prazoFinal__lte=limite
         ).exclude(status='concluida').update(status='perto do prazo')
 
-        # 3 - Em aberto (prazo maior que 3 dias)
+        # 3 - Atualiza em aberto (> 3 dias)
         Tarefas.objects.filter(
             prazoFinal__gt=limite
         ).exclude(status='concluida').update(status='em aberto')
 
-        return Tarefas.objects.filter(concluida=False,deletada=False).order_by('-urgente','prazoFinal') #urgente Primeiro, e prazoFinal depois
+        # Filtra tarefas visíveis
+        return (
+            Tarefas.objects
+            .filter(concluida=False, deletada=False)
+            .order_by('-urgente', 'prazoFinal')
+        )
     
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -280,6 +285,11 @@ class TarefasViewSet(viewsets.ModelViewSet):
             else:
                 queryset =queryset .order_by(order_by)
         
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
