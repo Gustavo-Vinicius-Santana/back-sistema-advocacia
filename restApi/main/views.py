@@ -21,6 +21,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime, time
 from dateutil.relativedelta import relativedelta
 from rest_framework.pagination import PageNumberPagination
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from rest_framework.exceptions import ValidationError
 
 
@@ -97,6 +98,54 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
     queryset = Representante.objects.all()
     serializer_class = RepresentanteSerializer
     permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        alowed_field = [
+            'nome',
+            'cpf',
+            'telefone',
+            'email',
+            'cliente'
+        ]
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+            
+        if field not in alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+            
+        # queryset base
+        queryset = self.get_queryset()
+        
+        #filtro especial para cliente
+        if field =='cliente':
+            queryset = queryset.filter(cliente__nome__icontains=value)
+        else:
+            queryset = queryset.filter(**{f"{field}__icontains": value})
+            
+        # ordenacao
+        if order_by:
+            queryset = queryset.order_by(order_by)
+        else:
+            queryset = queryset.order_by('id')
+            
+        # Paginação    
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
@@ -203,6 +252,53 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
     queryset = TipoAcao.objects.all()
     serializer_class = TipoAcaoSerializer
     permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        
+        # Parametros
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        alowed_field = [
+            'nome',
+            'grupoAcao'
+        ]
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+            
+        if field not in alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+            
+        # queryset base
+        queryset = self.get_queryset()
+        
+        #filtro especial para grupoAcao
+        if field =='grupoAcao':
+            queryset = queryset.filter(grupoAcao__nome__icontains=value)
+        else:
+            queryset = queryset.filter(**{f"{field}__icontains": value})
+            
+        # ordenacao
+        if order_by:
+            queryset = queryset.order_by(order_by)
+        else:
+            queryset = queryset.order_by('id')
+            
+        # Paginação    
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     
     
 class FaseProcessoViewSet(viewsets.ModelViewSet):
@@ -840,13 +936,41 @@ def clientes65(request):
 def clientesSemContrato(request):
     if request.method == 'GET':
         dataAtual = timezone.now().date()
+        
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        page = request.GET.get('page', 1)
+        page_size = int(request.GET.get('page_size', 10))
+    
+        allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone']
+
+        if not field or not value:
+            raise ValidationError({
+                'error': 'Os parâmetros "field" e "value" são obrigatórios.'
+            })
+        if field not in allowed_field:
+            raise ValidationError({
+                'error': f'O campo "{field}" nao é permitido para busca.'
+            })
+        
+        # Query filtrando clientes sem contrato 
+        clientes = Cliente.objects.filter(
+            contrato = False
+        ).filter(
+            **{f"{field}__icontains": value}
+        )
+       
+           
 
         # intervalo de nascimentos para quem fará 65 anos em até 5 dias
         data65 = dataAtual - relativedelta(years=65)
         dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
         dataFim = data65 + relativedelta(days=5) 
-
-        clientes = Cliente.objects.filter(contrato = False).annotate(
+        
+        # aplicando prioridades
+        clientes = clientes.annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
@@ -855,13 +979,31 @@ def clientesSemContrato(request):
                 default=Value(0),
                 output_field=IntegerField()
             )
-        ).order_by('-prioridade','id')
-   
+        )
+
+        # Ordenação final
+        if order_by:
+            clientes = clientes.order_by('-prioridade', order_by)
+        else:
+            clientes = clientes.order_by('-prioridade', 'id')
+            
+        # Paginação
+        paginator = Paginator(clientes, page_size)
+        try:
+            clientes = paginator.page(page)
+        except PageNotAnInteger:
+            clientes = paginator.page(1)
+        except EmptyPage:
+            clientes = paginator.page(paginator.num_pages)
+        
+        # Serialização
         serializer = ClienteSerializer(clientes, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+        
 
 
 
