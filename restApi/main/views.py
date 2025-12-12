@@ -104,15 +104,16 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
         
-        alowed_field = [
+        allowed_field = [
             'nome',
             'cpf',
             'telefone',
             'email',
-            'cliente'
+            'cliente',
+            'None'
         ]
             
-        if field not in alowed_field:
+        if field not in allowed_field:
             raise ValidationError({
                 "error": f"O campo '{field}' não é permitido para busca."
             })
@@ -258,7 +259,8 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
         
         alowed_field = [
             'nome',
-            'grupoAcao'
+            'grupoAcao',
+            'None'
         ]
         
             
@@ -937,7 +939,7 @@ def clientesSemContrato(request):
         page = request.GET.get('page', 1)
         page_size = int(request.GET.get('page_size', 10))
     
-        allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone']
+        allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone','None']
 
         # Validando o campo
         if field not in allowed_field:
