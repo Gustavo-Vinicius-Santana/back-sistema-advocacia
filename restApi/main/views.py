@@ -110,13 +110,14 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
             'telefone',
             'email',
             'cliente',
-            'None'
+        
         ]
             
-        if field not in allowed_field:
-            raise ValidationError({
-                "error": f"O campo '{field}' não é permitido para busca."
-            })
+        if field and value:
+            if field not in allowed_field:
+                raise ValidationError({
+                    "error": f"O campo '{field}' não é permitido para busca."
+                })
             
         # queryset base
         queryset = self.get_queryset()
@@ -260,14 +261,15 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
         alowed_field = [
             'nome',
             'grupoAcao',
-            'None'
+        
         ]
         
             
-        if field not in alowed_field:
-            raise ValidationError({
-                "error": f"O campo '{field}' não é permitido para busca."
-            })
+        if field and value:
+            if field not in alowed_field:
+                raise ValidationError({
+                    "error": f"O campo '{field}' não é permitido para busca."
+                })
             
         # queryset base
         queryset = self.get_queryset()
@@ -939,13 +941,14 @@ def clientesSemContrato(request):
         page = request.GET.get('page', 1)
         page_size = int(request.GET.get('page_size', 10))
     
-        allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone','None']
+        allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone']
 
         # Validando o campo
-        if field not in allowed_field:
-            raise ValidationError({
-                'error': f'O campo "{field}" nao é permitido para busca.'
-            })
+        if field and value:
+            if field not in allowed_field:
+                raise ValidationError({
+                    'error': f'O campo "{field}" nao é permitido para busca.'
+                })
         
         # Query filtrando clientes sem contrato 
         clientes = Cliente.objects.filter(
