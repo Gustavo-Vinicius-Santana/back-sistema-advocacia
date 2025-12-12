@@ -109,7 +109,7 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
             'cpf',
             'telefone',
             'email',
-            'cliente',
+            'cliente'
         
         ]
             
@@ -118,16 +118,16 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
                 raise ValidationError({
                     "error": f"O campo '{field}' não é permitido para busca."
                 })
-            
-        # queryset base
-        queryset = self.get_queryset()
-        
-        #filtro especial para cliente
-        if field =='cliente':
-            queryset = queryset.filter(cliente__nome__icontains=value)
+            #filtro especial para cliente
+            if field =='cliente':
+                queryset = queryset.filter(cliente__nome__icontains=value)
+            else:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+                
         else:
-            queryset = queryset.filter(**{f"{field}__icontains": value})
-            
+            # queryset base
+            queryset = self.get_queryset()
+        
         # ordenacao
         if order_by:
             queryset = queryset.order_by(order_by)
@@ -260,7 +260,7 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
         
         alowed_field = [
             'nome',
-            'grupoAcao',
+            'grupoAcao'
         
         ]
         
@@ -270,16 +270,15 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
                 raise ValidationError({
                     "error": f"O campo '{field}' não é permitido para busca."
                 })
-            
+            #filtro especial para grupoAcao
+            if field =='grupoAcao':
+                queryset = queryset.filter(grupoAcao__nome__icontains=value)
+            else:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
         # queryset base
-        queryset = self.get_queryset()
-        
-        #filtro especial para grupoAcao
-        if field =='grupoAcao':
-            queryset = queryset.filter(grupoAcao__nome__icontains=value)
         else:
-            queryset = queryset.filter(**{f"{field}__icontains": value})
-            
+            queryset = self.get_queryset()
+        
         # ordenacao
         if order_by:
             queryset = queryset.order_by(order_by)
@@ -949,13 +948,17 @@ def clientesSemContrato(request):
                 raise ValidationError({
                     'error': f'O campo "{field}" nao é permitido para busca.'
                 })
-        
-        # Query filtrando clientes sem contrato 
-        clientes = Cliente.objects.filter(
-            contrato = False
-        ).filter(
-            **{f"{field}__icontains": value}
-        )
+            # Query filtrando clientes sem contrato 
+            clientes = Cliente.objects.filter(
+                contrato = False
+            ).filter(
+                **{f"{field}__icontains": value}
+            )
+        else:
+            # Query base
+            clientes = Cliente.objects.filter(
+                contrato = False
+            )
        
            
 
