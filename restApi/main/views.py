@@ -111,10 +111,6 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
             'email',
             'cliente'
         ]
-        if not field or not value:
-            raise ValidationError({
-                "error": "Os campos 'field' e 'value' são obrigatórios."
-            })
             
         if field not in alowed_field:
             raise ValidationError({
@@ -264,10 +260,7 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
             'nome',
             'grupoAcao'
         ]
-        if not field or not value:
-            raise ValidationError({
-                "error": "Os campos 'field' e 'value' são obrigatórios."
-            })
+        
             
         if field not in alowed_field:
             raise ValidationError({
@@ -946,10 +939,7 @@ def clientesSemContrato(request):
     
         allowed_field = ['nome', 'dataNascimento', 'sexo', 'email', 'telefone']
 
-        if not field or not value:
-            raise ValidationError({
-                'error': 'Os parâmetros "field" e "value" são obrigatórios.'
-            })
+        # Validando o campo
         if field not in allowed_field:
             raise ValidationError({
                 'error': f'O campo "{field}" nao é permitido para busca.'
