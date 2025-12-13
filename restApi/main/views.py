@@ -199,11 +199,9 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             if field not in allowed_fields:
                 return Response({"error": "Campo de filtro inválido."}, status=400)
 
-            # Campos simples
             if field in ['numeroProcesso', 'fase', 'status']:
                 queryset = queryset.filter(**{f"{field}__icontains": value})
 
-            # Campos especiais (FK)
             elif field == 'clienteId':
                 queryset = queryset.filter(clienteId__nome__icontains=value)
 
@@ -214,18 +212,25 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(clienteId__nome__icontains=value)
 
         # ---------------- ORDENAÇÃO ----------------
-        if order_by == 'clienteId':
-            queryset = queryset.order_by('clienteId__nome')
-
-        elif order_by == 'advogadoCriadorId':
-            queryset = queryset.order_by('advogadoCriadorId__nome')
-
-        elif order_by in ['fase', 'status']:
-            queryset = queryset.order_by(order_by)
-
-        elif order_by:
-            queryset = queryset.order_by(order_by)
-
+        # Mapeamento para ordenação
+        order_mapping = {
+            'clienteId': 'clienteId__nome',
+            '-clienteId': '-clienteId__nome',
+            'advogadoCriadorId': 'advogadoCriadorId__nome',
+            '-advogadoCriadorId': '-advogadoCriadorId__nome',
+            'fase': 'fase__nome',  # Ordena pelo nome da fase
+            '-fase': '-fase__nome',
+            'status': 'status__nome',  # Ordena pelo nome do status
+            '-status': '-status__nome',
+        }
+        
+        if order_by:
+            # Verifica se precisa de mapeamento especial
+            if order_by in order_mapping:
+                queryset = queryset.order_by(order_mapping[order_by])
+            else:
+                # Ordenação padrão
+                queryset = queryset.order_by(order_by)
         else:
             queryset = queryset.order_by('-prioritario')
 
