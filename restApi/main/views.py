@@ -1075,9 +1075,9 @@ def clientesSemContrato(request):
     if request.method == 'GET':
         dataAtual = timezone.now().date()
         
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
+        field = request.GET.get('field')
+        value = request.GET.get('value')
+        order_by = request.GET.get('order_by')
         
         page = request.GET.get('page', 1)
         page_size = int(request.GET.get('page_size', 10))
