@@ -18,12 +18,15 @@ from jwt.exceptions import InvalidTokenError
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from datetime import timedelta, datetime, time
+from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
 from rest_framework.pagination import PageNumberPagination
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from rest_framework.exceptions import ValidationError
-
+from django.db.models.functions import ExtractDay, Now
+from django.db.models import ExpressionWrapper, F, IntegerField
+# Remova DurationField se não estiver usando
+from django.db.models import DateField
 
 
 
@@ -99,10 +102,49 @@ class ClienteViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            
+            # Calcular dias para 65 anos manualmente para cada cliente
+            for item in response.data['results']:
+                if item.get('dataNascimento'):
+                    # Parse da data de nascimento
+                    data_nasc_str = item['dataNascimento']
+                    # Pode vir em diferentes formatos dependendo do serializer
+                    if isinstance(data_nasc_str, str):
+                        data_nasc = datetime.strptime(data_nasc_str, '%Y-%m-%d').date()
+                    else:
+                        # Se já for um objeto date
+                        data_nasc = data_nasc_str
+                    
+                    # Calcular data de 65 anos
+                    data_65 = data_nasc + relativedelta(years=65)
+                    
+                    # Calcular dias restantes
+                    dias_para_65 = (data_65 - dataAtual).days
+                    item['dias_para_65'] = dias_para_65
+                else:
+                    item['dias_para_65'] = None
+            return response
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        data = serializer.data
+        
+        # Calcular dias para 65 anos para resposta sem paginação
+        for item in data:
+            if item.get('dataNascimento'):
+                data_nasc_str = item['dataNascimento']
+                if isinstance(data_nasc_str, str):
+                    data_nasc = datetime.strptime(data_nasc_str, '%Y-%m-%d').date()
+                else:
+                    data_nasc = data_nasc_str
+                
+                data_65 = data_nasc + relativedelta(years=65)
+                dias_para_65 = (data_65 - dataAtual).days
+                item['dias_para_65'] = dias_para_65
+            else:
+                item['dias_para_65'] = None
+                
+        return Response(data)
 
 
 class RepresentanteViewSet(viewsets.ModelViewSet):
