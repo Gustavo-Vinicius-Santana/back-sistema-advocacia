@@ -171,8 +171,7 @@ class AdvogadoViewSet(viewsets.ModelViewSet):
     queryset = Advogado.objects.all()
     serializer_class = AdvogadoSerializer
     permission_classes = [IsAuthenticated]
-    
-    
+
 class ProcessoViewSet(viewsets.ModelViewSet):
     queryset = Processo.objects.all()
     serializer_class = ProcessoSerializer
@@ -198,6 +197,9 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         data_inicio = request.query_params.get('data_inicio')
         data_fim = request.query_params.get('data_fim')
         periodo = request.query_params.get('periodo')  # Ex: 'hoje', 'semana', 'mes', 'ano'
+        
+        # NOVO: Filtro por ID do cliente
+        cliente_id_filter = request.query_params.get('cliente_id')
 
         allowed_fields = [
             'numeroProcesso',
@@ -211,6 +213,14 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             'prioritario',
             'concluido'
         ]
+
+        # ---------------- NOVO: FILTRO POR ID DO CLIENTE ----------------
+        if cliente_id_filter:
+            try:
+                cliente_id = int(cliente_id_filter)
+                queryset = queryset.filter(clienteId__id=cliente_id)
+            except (ValueError, TypeError):
+                return Response({"error": "ID do cliente deve ser um número inteiro válido"}, status=400)
 
         # ---------------- FILTRO POR STATUS ----------------
         if status_filter:
