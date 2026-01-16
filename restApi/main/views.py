@@ -47,7 +47,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
         dataFim = data65 + relativedelta(days=5)     # vai fazer (até 5 dias à frente)
 
-        queryset = self.get_queryset().filter(contrato=True).annotate(
+        queryset = self.get_queryset().annotate(
             prioridade=Case(
                 When(
                     dataNascimento__range=(dataInicio, dataFim),
@@ -57,6 +57,16 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 output_field=IntegerField()
             )
         ).order_by('-prioridade', 'id')
+        
+        # Filtro por contrato (novo parâmetro)
+        contrato_param = request.query_params.get('contrato')
+        if contrato_param is not None:
+            if contrato_param.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(contrato=True)
+            elif contrato_param.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(contrato=False)
+            else:
+                return Response({"error": "Valor inválido para o parâmetro 'contrato'. Use 'true' ou 'false'."}, status=400)
         
         #Parametros de filtro e ordenação
         field = request.query_params.get('field')
@@ -78,6 +88,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             # Campo composto (parceiro)
             elif field == 'parceiro':
                 queryset = queryset.filter(parceiro__nome__icontains=value)
+        
         if order_by:
             if order_by == 'parceiro':
                 queryset = queryset.order_by('parceiro__nome')
