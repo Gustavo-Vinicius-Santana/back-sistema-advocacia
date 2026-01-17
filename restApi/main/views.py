@@ -524,44 +524,50 @@ class TarefasViewSet(viewsets.ModelViewSet):
         data_limite = hoje + timedelta(days=3)
         limite = datetime.combine(data_limite, time.max)  # até 23:59:59
 
-        # 1 - Atualiza atrasadas
+        # Atualiza status de TODAS as tarefas (incluindo concluídas e deletadas)
+        # Mas mantém o status das concluídas inalterado
         Tarefas.objects.filter(
-            prazoFinal__lt=hoje
-        ).exclude(status='concluida').update(status='atrasada')
+            prazoFinal__lt=hoje,
+            concluida=False
+        ).update(status='atrasada')
 
-        # 2 - Atualiza perto do prazo (hoje até +3 dias)
         Tarefas.objects.filter(
             prazoFinal__gte=hoje,
-            prazoFinal__lte=limite
-        ).exclude(status='concluida').update(status='perto do prazo')
+            prazoFinal__lte=limite,
+            concluida=False
+        ).update(status='perto do prazo')
 
-        # 3 - Atualiza em aberto (> 3 dias)
         Tarefas.objects.filter(
-            prazoFinal__gt=limite
-        ).exclude(status='concluida').update(status='em aberto')
+            prazoFinal__gt=limite,
+            concluida=False
+        ).update(status='em aberto')
 
-        # Filtra tarefas visíveis
-        return (
-            Tarefas.objects
-            .filter(concluida=False, deletada=False)
-            .order_by('-urgente', 'prazoFinal')
-        )
+        # Retorna TODAS as tarefas sem filtro nenhum
+        return Tarefas.objects.all()
     
     def list(self, request, *args, **kwargs):
+        # Começa com todas as tarefas
         queryset = self.get_queryset()
-        #Parametros de filtro e ordenação
+        
+        # Parâmetros de filtro e ordenação
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
-        alowed_fields = [
+        
+        # Filtros principais
+        concluida = request.query_params.get('concluida')
+        deletada = request.query_params.get('deletada')
+        status = request.query_params.get('status')
+        
+        allowed_fields = [
             'advogadoCriadorId',
             'advogadoResponsavelId',
             'processoOrigemId'
         ]
         
+        # Filtro por campo composto (FK) - somente se ambos field e value forem fornecidos
         if field and value:
-            #campos compostos (FK)
-            if field not in alowed_fields:
+            if field not in allowed_fields:
                 return Response({"error": "Campo de filtro inválido."}, status=400)
             match field:
                 case 'advogadoCriadorId':
@@ -570,18 +576,66 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(advogadoResponsavelId__nome__icontains=value)
                 case 'processoOrigemId':
                     queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
+        # Se apenas field for fornecido sem value, retorna erro
+        elif field and not value:
+            return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
+        elif not field and value:
+            return Response({"error": "Parâmetro 'field' é obrigatório quando 'value' é fornecido."}, status=400)
         
-        #Validando os parametros de ordenação
+        # Filtro por concluida - somente se o parâmetro for fornecido
+        if concluida is not None:
+            if concluida.lower() in ['true', '1', 'yes', 'verdadeiro', 'sim']:
+                queryset = queryset.filter(concluida=True)
+            elif concluida.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
+                queryset = queryset.filter(concluida=False)
+            else:
+                return Response(
+                    {"error": "Valor inválido para 'concluida'. Use 'true' ou 'false'."}, 
+                    status=400
+                )
+        
+        # Filtro por deletada - somente se o parâmetro for fornecido
+        if deletada is not None:
+            if deletada.lower() in ['true', '1', 'yes', 'verdadeiro', 'sim']:
+                queryset = queryset.filter(deletada=True)
+            elif deletada.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
+                queryset = queryset.filter(deletada=False)
+            else:
+                return Response(
+                    {"error": "Valor inválido para 'deletada'. Use 'true' ou 'false'."}, 
+                    status=400
+                )
+        
+        # Filtro por status - somente se o parâmetro for fornecido
+        if status is not None:
+            valid_statuses = ['em aberto', 'atrasada', 'perto do prazo']
+            if status not in valid_statuses:
+                return Response(
+                    {"error": f"Status inválido. Status válidos: {', '.join(valid_statuses)}"}, 
+                    status=400
+                )
+            queryset = queryset.filter(status=status)
+        
+        # Ordenação
         if order_by:
             if order_by == 'advogadoCriadorId':
                 queryset = queryset.order_by('advogadoCriadorId__nome')
             elif order_by == 'advogadoResponsavelId':
-                queryset =queryset .order_by('advogadoResponsavelId__nome')
+                queryset = queryset.order_by('advogadoResponsavelId__nome')
             elif order_by == 'processoOrigemId':
-                queryset =queryset .order_by('processoOrigemId__numeroProcesso')
+                queryset = queryset.order_by('processoOrigemId__numeroProcesso')
             else:
-                queryset =queryset .order_by(order_by)
+                # Tenta ordenar pelo campo especificado
+                try:
+                    queryset = queryset.order_by(order_by)
+                except FieldError:
+                    # Se houver erro, mantém ordenação padrão
+                    queryset = queryset.order_by('-urgente', 'prazoFinal')
+        else:
+            # Ordenação padrão SEMPRE aplicada
+            queryset = queryset.order_by('-urgente', 'prazoFinal')
         
+        # Paginação
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -663,8 +717,6 @@ class TarefasViewSet(viewsets.ModelViewSet):
             )
             historico.save()
                 
-        
-
         return response
     
 

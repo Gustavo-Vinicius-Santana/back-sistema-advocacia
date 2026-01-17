@@ -208,11 +208,11 @@ class Tarefas(models.Model):
     urgente = models.BooleanField(default=False,blank=True)
     arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
-    concluida = models.BooleanField(default=False,blank=True)
-    deletada = models.BooleanField(default=False)
+    concluida = models.BooleanField(default=False,blank=True) # UM FRILTRO
+    deletada = models.BooleanField(default=False) # UM FILTRO
     deletadaPor = models.CharField(max_length=255, default="Ninguem", blank=True)
     STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]
-    status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' ) #choices APAGADA,CONCLUIDA,EM ANDAMENTO
+    status = models.CharField(choices=STATUS_CHOICES,max_length=50, default='em aberto' )  # UM FILTRO
     observacoes = models.TextField(blank=True)
 
 
