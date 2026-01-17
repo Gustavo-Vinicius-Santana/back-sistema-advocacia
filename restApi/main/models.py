@@ -205,7 +205,7 @@ class Tarefas(models.Model):
     tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT, null=True, blank=True)
     dataInicio = models.DateTimeField(auto_now_add=True)
     prazoFinal = models.DateTimeField(null=True, blank=True)
-    urgente = models.BooleanField(default=False,blank=True)
+    urgente = models.BooleanField(default=False,blank=True) # UM FILTRO
     arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
     concluida = models.BooleanField(default=False,blank=True) # UM FRILTRO

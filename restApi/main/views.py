@@ -558,6 +558,16 @@ class TarefasViewSet(viewsets.ModelViewSet):
         concluida = request.query_params.get('concluida')
         deletada = request.query_params.get('deletada')
         status = request.query_params.get('status')
+        urgente = request.query_params.get('urgente')
+        
+        # NOVO: Filtro por ID do advogado responsável
+        advogado_responsavel_id = request.query_params.get('advogado_responsavel_id')
+        
+        # NOVO: Filtro por ID do advogado criador
+        advogado_criador_id = request.query_params.get('advogado_criador_id')
+        
+        # NOVO: Filtro por ID do processo de origem
+        processo_origem_id = request.query_params.get('processo_origem_id')
         
         allowed_fields = [
             'advogadoCriadorId',
@@ -581,6 +591,39 @@ class TarefasViewSet(viewsets.ModelViewSet):
             return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
         elif not field and value:
             return Response({"error": "Parâmetro 'field' é obrigatório quando 'value' é fornecido."}, status=400)
+        
+        # NOVO: Filtro por ID do advogado responsável
+        if advogado_responsavel_id is not None:
+            try:
+                advogado_id = int(advogado_responsavel_id)
+                queryset = queryset.filter(advogadoResponsavelId__id=advogado_id)
+            except ValueError:
+                return Response(
+                    {"error": "ID do advogado responsável deve ser um número válido."}, 
+                    status=400
+                )
+        
+        # NOVO: Filtro por ID do advogado criador
+        if advogado_criador_id is not None:
+            try:
+                advogado_id = int(advogado_criador_id)
+                queryset = queryset.filter(advogadoCriadorId__id=advogado_id)
+            except ValueError:
+                return Response(
+                    {"error": "ID do advogado criador deve ser um número válido."}, 
+                    status=400
+                )
+        
+        # NOVO: Filtro por ID do processo de origem
+        if processo_origem_id is not None:
+            try:
+                processo_id = int(processo_origem_id)
+                queryset = queryset.filter(processoOrigemId__id=processo_id)
+            except ValueError:
+                return Response(
+                    {"error": "ID do processo de origem deve ser um número válido."}, 
+                    status=400
+                )
         
         # Filtro por concluida - somente se o parâmetro for fornecido
         if concluida is not None:
@@ -615,6 +658,18 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     status=400
                 )
             queryset = queryset.filter(status=status)
+
+        # Filtro por urgente - somente se o parâmetro for fornecido
+        if urgente is not None:
+            if urgente.lower() in ['true', '1', 'yes', 'verdadeiro', 'sim']:
+                queryset = queryset.filter(urgente=True)
+            elif urgente.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
+                queryset = queryset.filter(urgente=False)
+            else:
+                return Response(
+                    {"error": "Valor inválido para 'urgente'. Use 'true' ou 'false'."}, 
+                    status=400
+                )
         
         # Ordenação
         if order_by:
