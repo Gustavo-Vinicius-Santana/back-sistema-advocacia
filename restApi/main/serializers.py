@@ -61,18 +61,21 @@ class RepresentanteSerializer(serializers.ModelSerializer):
         
 class ParceirosSerializer(serializers.ModelSerializer):
     endereco = serializers.SerializerMethodField(method_name='get_endereco')
+    total_clientes = serializers.IntegerField(read_only=True)  # Campo do annotate
+    
     class Meta:
         model = Parceiros
         fields = '__all__'
+        extra_fields = ['endereco', 'total_clientes']
         
-    def get_endereco(self,obj):
+    def get_endereco(self, obj):
         endereco = {
-            'numero':obj.numero,
-            'rua':obj.rua,
-            'estado':obj.estado,
-            'bairro':obj.bairro,
-            'cidade':obj.cidade,
-            }
+            'numero': obj.numero,
+            'rua': obj.rua,
+            'estado': obj.estado,
+            'bairro': obj.bairro,
+            'cidade': obj.cidade,
+        }
         return endereco
 
 class EscritoriosSerializer(serializers.ModelSerializer):
