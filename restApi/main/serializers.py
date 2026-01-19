@@ -113,9 +113,16 @@ class ClienteEsperaSerializer(serializers.ModelSerializer):
         
         
 class AdvogadoSerializer(serializers.ModelSerializer):
+    tarefas_criadas = serializers.IntegerField(read_only=True)
+    tarefas_responsavel = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = Advogado
-        fields = ['id','nome','telefone','email','foto','oab','is_active','is_staff','is_superuser','is_online','last_login']
+        fields = [
+            'id', 'nome', 'telefone', 'email', 'foto', 'oab',
+            'is_active', 'is_staff', 'is_superuser', 'is_online', 'last_login',
+            'tarefas_criadas', 'tarefas_responsavel'
+        ]
         
 class AdvogadoResumidoSerializer(serializers.ModelSerializer):
     class Meta:

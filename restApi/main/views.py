@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
-from django.db.models import Case, When, Value, IntegerField, Count
+from django.db.models import Case, When, Value, IntegerField, Count, Q
 import json
 import jwt
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -273,6 +273,72 @@ class AdvogadoViewSet(viewsets.ModelViewSet):
     queryset = Advogado.objects.all()
     serializer_class = AdvogadoSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination  # Adiciona a paginação aqui
+    
+    def get_queryset(self):
+        """
+        Annota o queryset base com as contagens de tarefas.
+        """
+        queryset = Advogado.objects.annotate(
+            tarefas_criadas=Count(
+                'advogadoCriador__id',
+                distinct=True,
+                filter=Q(advogadoCriador__deletada=False)
+            ),
+            tarefas_responsavel=Count(
+                'advogadoResponsavel__id',
+                distinct=True,
+                filter=Q(advogadoResponsavel__deletada=False)
+            )
+        )
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+
+        # Campos permitidos para busca
+        allowed_fields = ['nome', 'email', 'telefone', 'oab']
+        
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por campo e valor
+        if field and value:
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Campos simples
+            if field in ['nome', 'email', 'telefone', 'oab']:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+        
+        # Ordenação
+        if order_by:
+            # Permite ordenar pelos campos annotados também
+            annotate_fields = [
+                'tarefas_criadas', '-tarefas_criadas',
+                'tarefas_responsavel', '-tarefas_responsavel'
+            ]
+            
+            if order_by in annotate_fields:
+                queryset = queryset.order_by(order_by)
+            else:
+                queryset = queryset.order_by(order_by)
+        else:
+            queryset = queryset.order_by('id')
+        
+        # Paginação - EXATAMENTE IGUAL À VIEW DE PARCEIROS
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 class ProcessoViewSet(viewsets.ModelViewSet):
     queryset = Processo.objects.all()
