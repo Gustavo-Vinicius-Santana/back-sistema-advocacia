@@ -151,49 +151,52 @@ class RepresentanteViewSet(viewsets.ModelViewSet):
     queryset = Representante.objects.all()
     serializer_class = RepresentanteSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination  # Adiciona paginação aqui
+    
+    def get_queryset(self):
+        # Queryset base - pode adicionar annotate se necessário
+        queryset = Representante.objects.all()
+        return queryset
     
     def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro e ordenação
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
+
+        # Campos permitidos para busca
+        allowed_fields = ['nome', 'cpf', 'telefone', 'email', 'cliente']
         
-        allowed_field = [
-            'nome',
-            'cpf',
-            'telefone',
-            'email',
-            'cliente'
+        # Queryset base
+        queryset = self.get_queryset()
         
-        ]
-            
+        # Filtro por campo e valor
         if field and value:
-            if field not in allowed_field:
-                raise ValidationError({
-                    "error": f"O campo '{field}' não é permitido para busca."
-                })
-            #filtro especial para cliente
-            if field =='cliente':
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Filtro especial para cliente (relacionamento)
+            if field == 'cliente':
                 queryset = queryset.filter(cliente__nome__icontains=value)
             else:
-                queryset = queryset.filter(**{f"{field}__icontains": value})
-                
-        else:
-            # queryset base
-            queryset = self.get_queryset()
+                # Campos simples diretos no modelo
+                if field in ['nome', 'cpf', 'telefone', 'email']:
+                    queryset = queryset.filter(**{f"{field}__icontains": value})
         
-        # ordenacao
+        # Ordenação
         if order_by:
+            # Permite ordenar pelos campos
             queryset = queryset.order_by(order_by)
         else:
             queryset = queryset.order_by('id')
-            
-        # Paginação    
+        
+        # Paginação
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        # sem paginação
+        # Sem paginação
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
