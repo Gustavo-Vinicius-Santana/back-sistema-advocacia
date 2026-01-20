@@ -266,7 +266,10 @@ class ParceirosViewSet(viewsets.ModelViewSet):
 class EscritoriosViewSet(viewsets.ModelViewSet):
     queryset = Escritorios.objects.all()
     serializer_class = EscritoriosSerializer
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [IsAuthenticated]
+    
+    # Adicione este atributo - assumindo que standardResultsSetPagination já está definido
+    pagination_class = standardResultsSetPagination
 
 
 
