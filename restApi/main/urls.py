@@ -1,10 +1,7 @@
 from django.urls import path, include
-
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
-
-
 
 router = DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet)
@@ -23,11 +20,6 @@ router.register(r'parceiros', views.ParceirosViewSet,basename='parceiros')
 router.register(r'escritorios', views.EscritoriosViewSet,basename='escritorios')
 router.register(r'arquivoModel', views.ArquivoModelViewSet, basename='arquivoModel')
 router.register(r'arquivoTarefa', views.ArquivoTarefaViewSet, basename='arquivoTarefa')
-
-"""BUG 14/07/2025: o endpoint de clientes espera os dados dos clientes ja cadastrados.
-Corrigido: em 1 hora"""
-
-"""Dessa forma ai em cima o router do django ja vai criar as views [GET, POST, PUT, DELETE E PATCH]"""
 
 urlpatterns = [
     path('token/', views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
@@ -75,15 +67,8 @@ urlpatterns = [
     path('etapas/<int:fase_id>/fase/', views.etapasPorFase, name='etapasPorFase'),
     path('tiposAcao/<int:grupo_id>/grupo/', views.tipoPorGrupo, name='tiposAcaoPorGrupo'),
     
-
-
-
-
+    # NOVO ENDPOINT - parceiro/select
+    path('parceiro/select/', views.parceiros_select, name='parceiros-select'),
     
     path('', include(router.urls)),
-    # comentando para teste de commit
 ]
-
-
-
-

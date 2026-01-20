@@ -2068,3 +2068,22 @@ def tipoPorGrupo(request,grupo_id):
         return JsonResponse(jsonFile, safe=False)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def parceiros_select(request):
+    """
+    Endpoint para listar parceiros no formato para select.
+    Retorna apenas id e nome.
+    """
+    if request.method == 'GET':
+        try:
+            # Busca todos os parceiros, selecionando apenas id e nome
+            parceiros = Parceiros.objects.all().values('id', 'nome')
+            # Converte o QuerySet para lista
+            parceiros_list = list(parceiros)
+            return JsonResponse(parceiros_list, safe=False)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
