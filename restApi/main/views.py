@@ -2087,3 +2087,31 @@ def parceiros_select(request):
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def representante_por_cliente(request, cliente_id):
+    """
+    Endpoint para buscar representante pelo ID do cliente.
+    """
+    if request.method == 'GET':
+        try:
+            # Verifica se o cliente existe
+            cliente = Cliente.objects.get(id=cliente_id)
+            
+            # Busca o representante relacionado a este cliente
+            representante = Representante.objects.filter(cliente=cliente_id).first()
+            
+            if not representante:
+                return JsonResponse({'error': 'Nenhum representante encontrado para este cliente.'}, status=404)
+            
+            # Serializa os dados do representante
+            serializer = RepresentanteSerializer(representante)
+            return JsonResponse(serializer.data, safe=False)
+            
+        except Cliente.DoesNotExist:
+            return JsonResponse({'error': 'Cliente não encontrado.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)

@@ -67,8 +67,9 @@ urlpatterns = [
     path('etapas/<int:fase_id>/fase/', views.etapasPorFase, name='etapasPorFase'),
     path('tiposAcao/<int:grupo_id>/grupo/', views.tipoPorGrupo, name='tiposAcaoPorGrupo'),
     
-    # NOVO ENDPOINT - parceiro/select
+    # ENDPOINTS NOVOS
     path('parceiro/select/', views.parceiros_select, name='parceiros-select'),
+    path('cliente/<int:cliente_id>/representante/', views.representante_por_cliente, name='representante-por-cliente'),
     
     path('', include(router.urls)),
 ]
