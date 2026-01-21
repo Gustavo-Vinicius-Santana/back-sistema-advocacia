@@ -7,10 +7,22 @@ class ClienteSerializer(serializers.ModelSerializer):
     parceiroNome = serializers.CharField(source='parceiro.nome', read_only=True)
     dias_para_65 = serializers.IntegerField(read_only=True)
     
+    # Adicione os campos para contar processos nas diferentes categorias
+    processos_ativos_count = serializers.IntegerField(read_only=True)
+    processos_arquivados_count = serializers.IntegerField(read_only=True)
+    processos_urgentes_count = serializers.IntegerField(read_only=True)
+    processos_total_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Cliente
         fields = '__all__'
+        # Ou se preferir especificar os campos explicitamente:
+        # fields = [
+        #     'id', 'nome', 'cpf', 'telefone', 'dataNascimento', 
+        #     'processos_ativos_count', 'processos_arquivados_count',
+        #     'processos_urgentes_count', 'processos_total_count',
+        #     ... outros campos
+        # ]
 
     def get_endereco(self, obj):
         endereco = {

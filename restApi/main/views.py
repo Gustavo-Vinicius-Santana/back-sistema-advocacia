@@ -47,9 +47,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
         # Intervalo para quem está dentro de ±5 dias de completar 65 anos
         data65 = dataAtual - relativedelta(years=65)
-        dataInicio = data65 - relativedelta(days=5)  # já fez (até 5 dias atrás)
-        dataFim = data65 + relativedelta(days=5)     # vai fazer (até 5 dias à frente)
+        dataInicio = data65 - relativedelta(days=5)
+        dataFim = data65 + relativedelta(days=5)
 
+        # Adicione as anotações para contar processos por categoria
         queryset = self.get_queryset().annotate(
             prioridade=Case(
                 When(
@@ -58,7 +59,25 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 ),
                 default=Value(0),
                 output_field=IntegerField()
-            )
+            ),
+            # Total de processos ativos
+            processos_ativos_count=Count(
+                'processo',
+                filter=Q(processo__status='ativo')
+            ),
+            # Total de processos arquivados
+            processos_arquivados_count=Count(
+                'processo',
+                filter=Q(processo__status='arquivado')
+            ),
+            # Total de processos urgentes (ativos e prioritários)
+            processos_urgentes_count=Count(
+                'processo',
+                filter=Q(processo__status='ativo') & 
+                       Q(processo__prioritario=True)
+            ),
+            # Total geral de processos (todas as categorias)
+            processos_total_count=Count('processo')
         ).order_by('-prioridade', 'id')
         
         # Filtro por contrato (novo parâmetro)
@@ -71,14 +90,14 @@ class ClienteViewSet(viewsets.ModelViewSet):
             else:
                 return Response({"error": "Valor inválido para o parâmetro 'contrato'. Use 'true' ou 'false'."}, status=400)
         
-        #Parametros de filtro e ordenação
+        # Parâmetros de filtro e ordenação
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
 
         allowed_fields = [
             'nome','cpf','telefone','inss','parceiro'
-            ]
+        ]
         
         if field and value:
             if field not in allowed_fields:
@@ -97,7 +116,6 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 queryset = queryset.order_by('parceiro__nome')
             else:
                 queryset = queryset.order_by(order_by)
-        
         
         page = self.paginate_queryset(queryset)
         if page is not None:
