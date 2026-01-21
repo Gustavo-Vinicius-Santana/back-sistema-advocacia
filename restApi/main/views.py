@@ -345,12 +345,41 @@ class AdvogadoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
 class ProcessoViewSet(viewsets.ModelViewSet):
     queryset = Processo.objects.all()
-    serializer_class = ProcessoSerializer
+    serializer_class = ProcessoSerializer  # Seu serializer original
     permission_classes = [IsAuthenticated]
     pagination_class = standardResultsSetPagination
+    
+    def get_queryset(self):
+        """
+        Annota o queryset com as contagens de tarefas.
+        Como o serializer usa fields='__all__', os campos annotate serão incluídos.
+        """
+        queryset = Processo.objects.annotate(
+            total_tarefas=Count('tarefas', filter=Q(tarefas__deletada=False)),
+            tarefas_em_aberto=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='em aberto')
+            ),
+            tarefas_atrasadas=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='atrasada')
+            ),
+            tarefas_concluidas=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False, tarefas__concluida=True)
+            ),
+            tarefas_urgentes=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False, tarefas__urgente=True, tarefas__concluida=False)
+            ),
+            tarefas_perto_prazo=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='perto do prazo')
+            )
+        )
+        return queryset
     
     def list(self, request, *args, **kwargs):
         # Começa com todos os processos (sem filtro padrão)
@@ -375,6 +404,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         # NOVO: Filtro por ID do cliente
         cliente_id_filter = request.query_params.get('cliente_id')
 
+        # Adicione os novos campos de tarefas aos campos permitidos
         allowed_fields = [
             'numeroProcesso',
             'fase',
@@ -385,7 +415,14 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             'titulo',
             'classificacao',
             'prioritario',
-            'concluido'
+            'concluido',
+            # Novos campos de tarefas
+            'total_tarefas',
+            'tarefas_em_aberto',
+            'tarefas_atrasadas',
+            'tarefas_concluidas',
+            'tarefas_urgentes',
+            'tarefas_perto_prazo'
         ]
 
         # ---------------- NOVO: FILTRO POR ID DO CLIENTE ----------------
@@ -439,12 +476,10 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             elif field == 'dataContrato':
                 # Filtro por data específica
                 try:
-                    from django.utils.dateparse import parse_datetime, parse_date
                     data_valor = parse_datetime(value) or parse_date(value)
                     if data_valor:
-                        from django.utils import timezone
-                        data_inicio_dia = timezone.make_aware(timezone.datetime.combine(data_valor, timezone.datetime.min.time()))
-                        data_fim_dia = timezone.make_aware(timezone.datetime.combine(data_valor, timezone.datetime.max.time()))
+                        data_inicio_dia = timezone.make_aware(datetime.combine(data_valor, datetime.min.time()))
+                        data_fim_dia = timezone.make_aware(datetime.combine(data_valor, datetime.max.time()))
                         queryset = queryset.filter(dataContrato__range=[data_inicio_dia, data_fim_dia])
                 except (ValueError, TypeError):
                     return Response({"error": "Formato de data inválido. Use YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS"}, status=400)
@@ -466,12 +501,27 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(concluido=False)
                 else:
                     return Response({"error": "Valor inválido para 'concluido'. Use: 'true' ou 'false'"}, status=400)
+            
+            # --- NOVOS FILTROS PARA CAMPOS DE TAREFAS ---
+            elif field == 'total_tarefas':
+                try:
+                    valor = int(value)
+                    queryset = queryset.filter(total_tarefas=valor)
+                except (ValueError, TypeError):
+                    return Response({"error": "total_tarefas deve ser um número inteiro válido"}, status=400)
+            
+            elif field in ['tarefas_em_aberto', 'tarefas_atrasadas', 'tarefas_concluidas', 'tarefas_urgentes', 'tarefas_perto_prazo']:
+                try:
+                    valor = int(value)
+                    if valor > 0:
+                        queryset = queryset.filter(**{f"{field}__gte": valor})
+                    else:
+                        queryset = queryset.filter(**{field: 0})
+                except (ValueError, TypeError):
+                    return Response({"error": f"{field} deve ser um número inteiro válido"}, status=400)
 
         # ---------------- FILTRO POR PERÍODO DE DATA ----------------
         if data_inicio or data_fim or periodo:
-            from django.utils import timezone
-            from datetime import datetime, timedelta
-            
             # Filtro por período específico (hoje, semana, mês, ano)
             if periodo:
                 hoje = timezone.now().date()
@@ -507,8 +557,6 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             # Filtro por intervalo de datas específico
             else:
                 try:
-                    from django.utils.dateparse import parse_datetime, parse_date
-                    
                     if data_inicio:
                         data_inicio_valor = parse_datetime(data_inicio) or parse_date(data_inicio)
                         if data_inicio_valor:
@@ -525,6 +573,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                     return Response({"error": "Formato de data inválido. Use YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS"}, status=400)
 
         # ---------------- ORDENAÇÃO ----------------
+        # Adicione os novos campos ao order_mapping
         order_mapping = {
             'clienteId': 'clienteId__nome',
             '-clienteId': '-clienteId__nome',
@@ -532,6 +581,19 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             '-advogadoCriadorId': '-advogadoCriadorId__nome',
             'fase': 'fase__nome',
             '-fase': '-fase__nome',
+            # Mapeamento para novos campos de tarefas
+            'total_tarefas': 'total_tarefas',
+            '-total_tarefas': '-total_tarefas',
+            'tarefas_em_aberto': 'tarefas_em_aberto',
+            '-tarefas_em_aberto': '-tarefas_em_aberto',
+            'tarefas_atrasadas': 'tarefas_atrasadas',
+            '-tarefas_atrasadas': '-tarefas_atrasadas',
+            'tarefas_concluidas': 'tarefas_concluidas',
+            '-tarefas_concluidas': '-tarefas_concluidas',
+            'tarefas_urgentes': 'tarefas_urgentes',
+            '-tarefas_urgentes': '-tarefas_urgentes',
+            'tarefas_perto_prazo': 'tarefas_perto_prazo',
+            '-tarefas_perto_prazo': '-tarefas_perto_prazo',
         }
         
         if order_by:
@@ -541,7 +603,9 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                 else:
                     field_to_check = order_by.lstrip('-')
                     
-                    if field_to_check in ['clienteId', 'advogadoCriadorId', 'fase']:
+                    if field_to_check in ['clienteId', 'advogadoCriadorId', 'fase', 
+                                         'total_tarefas', 'tarefas_em_aberto', 'tarefas_atrasadas',
+                                         'tarefas_concluidas', 'tarefas_urgentes', 'tarefas_perto_prazo']:
                         if order_by in order_mapping:
                             queryset = queryset.order_by(order_mapping[order_by])
                         elif f'-{field_to_check}' in order_mapping and order_by.startswith('-'):

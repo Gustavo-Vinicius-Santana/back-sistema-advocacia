@@ -139,11 +139,20 @@ class ProcesssosResumidoSerializer(serializers.ModelSerializer):
         fields = ['id','advogadoCriadorId','advogadoCriadorNome','cliente']
 
 class ProcessoSerializer(serializers.ModelSerializer):
-    clienteNome = serializers.CharField(source='clienteId.nome',read_only=True)
+    clienteNome = serializers.CharField(source='clienteId.nome', read_only=True)
     dataContrato = serializers.DateTimeField()
-    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
-    grupoAcaoNome = serializers.CharField(source='grupoAcao.nome',read_only=True)
-    faseNome = serializers.CharField(source='fase.nome',read_only=True)
+    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome', read_only=True)
+    grupoAcaoNome = serializers.CharField(source='grupoAcao.nome', read_only=True)
+    faseNome = serializers.CharField(source='fase.nome', read_only=True)
+    
+    # Adicione estes campos explicitamente
+    total_tarefas = serializers.IntegerField(read_only=True, required=False)
+    tarefas_em_aberto = serializers.IntegerField(read_only=True, required=False)
+    tarefas_atrasadas = serializers.IntegerField(read_only=True, required=False)
+    tarefas_concluidas = serializers.IntegerField(read_only=True, required=False)
+    tarefas_urgentes = serializers.IntegerField(read_only=True, required=False)
+    tarefas_perto_prazo = serializers.IntegerField(read_only=True, required=False)
+    
     class Meta:
         model = Processo
         fields = '__all__'
