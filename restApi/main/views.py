@@ -745,11 +745,17 @@ class TarefasViewSet(viewsets.ModelViewSet):
             concluida=False
         ).update(status='em aberto')
 
-        # Retorna TODAS as tarefas sem filtro nenhum
-        return Tarefas.objects.all()
+        # NOVO: Otimiza as queries usando select_related para incluir cliente via processo
+        return Tarefas.objects.select_related(
+            'advogadoCriadorId',
+            'advogadoResponsavelId',
+            'tipoTarefa',
+            'processoOrigemId',  # Inclui processo
+            'processoOrigemId__clienteId'  # NOVO: Inclui cliente através do processo
+        ).all()
     
     def list(self, request, *args, **kwargs):
-        # Começa com todas as tarefas
+        # Começa com todas as tarefas (já otimizadas)
         queryset = self.get_queryset()
         
         # Parâmetros de filtro e ordenação
@@ -763,19 +769,19 @@ class TarefasViewSet(viewsets.ModelViewSet):
         status = request.query_params.get('status')
         urgente = request.query_params.get('urgente')
         
-        # NOVO: Filtro por ID do advogado responsável
+        # NOVO: Filtro por ID do cliente (opcional)
+        cliente_id = request.query_params.get('cliente_id')
+        
+        # Filtros por ID de relacionamentos
         advogado_responsavel_id = request.query_params.get('advogado_responsavel_id')
-        
-        # NOVO: Filtro por ID do advogado criador
         advogado_criador_id = request.query_params.get('advogado_criador_id')
-        
-        # NOVO: Filtro por ID do processo de origem
         processo_origem_id = request.query_params.get('processo_origem_id')
         
         allowed_fields = [
             'advogadoCriadorId',
             'advogadoResponsavelId',
-            'processoOrigemId'
+            'processoOrigemId',
+            'clienteNome'  # NOVO: Permite filtrar por nome do cliente
         ]
         
         # Filtro por campo composto (FK) - somente se ambos field e value forem fornecidos
@@ -789,13 +795,26 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(advogadoResponsavelId__nome__icontains=value)
                 case 'processoOrigemId':
                     queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
+                case 'clienteNome':  # NOVO: Filtro por nome do cliente
+                    queryset = queryset.filter(processoOrigemId__clienteId__nome__icontains=value)
         # Se apenas field for fornecido sem value, retorna erro
         elif field and not value:
             return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
         elif not field and value:
             return Response({"error": "Parâmetro 'field' é obrigatório quando 'value' é fornecido."}, status=400)
         
-        # NOVO: Filtro por ID do advogado responsável
+        # NOVO: Filtro por ID do cliente
+        if cliente_id is not None:
+            try:
+                cliente_id_int = int(cliente_id)
+                queryset = queryset.filter(processoOrigemId__clienteId__id=cliente_id_int)
+            except ValueError:
+                return Response(
+                    {"error": "ID do cliente deve ser um número válido."}, 
+                    status=400
+                )
+        
+        # Filtro por ID do advogado responsável
         if advogado_responsavel_id is not None:
             try:
                 advogado_id = int(advogado_responsavel_id)
@@ -806,7 +825,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     status=400
                 )
         
-        # NOVO: Filtro por ID do advogado criador
+        # Filtro por ID do advogado criador
         if advogado_criador_id is not None:
             try:
                 advogado_id = int(advogado_criador_id)
@@ -817,7 +836,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     status=400
                 )
         
-        # NOVO: Filtro por ID do processo de origem
+        # Filtro por ID do processo de origem
         if processo_origem_id is not None:
             try:
                 processo_id = int(processo_origem_id)
@@ -882,6 +901,8 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 queryset = queryset.order_by('advogadoResponsavelId__nome')
             elif order_by == 'processoOrigemId':
                 queryset = queryset.order_by('processoOrigemId__numeroProcesso')
+            elif order_by == 'clienteNome':  # NOVO: Ordenação por nome do cliente
+                queryset = queryset.order_by('processoOrigemId__clienteId__nome')
             else:
                 # Tenta ordenar pelo campo especificado
                 try:

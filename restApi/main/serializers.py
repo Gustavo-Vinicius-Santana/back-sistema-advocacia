@@ -195,16 +195,33 @@ class EtapaProcessoSerializer(serializers.ModelSerializer):
 
 
 class TarefasSerializer(serializers.ModelSerializer):
-    processoOrigemNumero = serializers.CharField(source='processoOrigemId.numeroProcesso',read_only=True)
-    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
-    advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome',read_only=True)
-    tipoTarefaNome = serializers.CharField(source='tipoTarefa.nome',read_only=True)
-    clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome',read_only=True)
+    processoOrigemNumero = serializers.CharField(source='processoOrigemId.numeroProcesso', read_only=True)
+    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome', read_only=True)
+    advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome', read_only=True)
+    tipoTarefaNome = serializers.CharField(source='tipoTarefa.nome', read_only=True)
+    clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome', read_only=True)
+    # NOVO: Adiciona o ID do cliente
+    clienteId = serializers.SerializerMethodField()
     prazoFinal = serializers.DateTimeField(input_formats=['%Y-%m-%d'])
     dataInicio = serializers.DateTimeField(read_only=True)
+    
     class Meta:
         model = Tarefas
         fields = '__all__'
+    
+    def get_clienteId(self, obj):
+        # Método seguro para obter o ID do cliente
+        # Acessa através da relação: Tarefa → Processo → Cliente
+        try:
+            # Verifica se existe o processo
+            if obj.processoOrigemId:
+                # Verifica se existe o cliente no processo
+                if hasattr(obj.processoOrigemId, 'clienteId') and obj.processoOrigemId.clienteId:
+                    return obj.processoOrigemId.clienteId.id
+        except AttributeError:
+            # Se houver qualquer erro de atributo, retorna None
+            pass
+        return None
         
 
 class TipoTarefaSerializer(serializers.ModelSerializer):
