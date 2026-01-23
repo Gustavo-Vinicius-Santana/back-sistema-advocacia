@@ -22,6 +22,7 @@ router.register(r'arquivoModel', views.ArquivoModelViewSet, basename='arquivoMod
 router.register(r'arquivoTarefa', views.ArquivoTarefaViewSet, basename='arquivoTarefa')
 
 urlpatterns = [
+    path('', include(router.urls)),
     path('token/', views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
     path('token/resetValidate/<str:token>', views.validate_reset_token_endpoint, name='validate_reset_token_endpoint'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -71,5 +72,6 @@ urlpatterns = [
     path('parceiro/select/', views.parceiros_select, name='parceiros-select'),
     path('cliente/<int:cliente_id>/representante/', views.representante_por_cliente, name='representante-por-cliente'),
     
-    path('', include(router.urls)),
+    path('select/', views.generic_select_view, name='generic-select'),
+
 ]

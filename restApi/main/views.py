@@ -1003,24 +1003,95 @@ class TipoTarefaViewSet(viewsets.ModelViewSet):
     queryset = TipoTarefa.objects.all()
     serializer_class = TipoTarefaSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = standardResultsSetPagination
+    
+    def get_queryset(self):
+        # Annota o queryset base com todas as estatísticas necessárias
+        queryset = TipoTarefa.objects.annotate(
+            total_tarefas=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False)
+            ),
+            # Contagens gerais
+            concluidas=Count(
+                'tarefas',
+                filter=Q(tarefas__concluida=True, tarefas__deletada=False)
+            ),
+            pendentes=Count(
+                'tarefas',
+                filter=Q(tarefas__concluida=False, tarefas__deletada=False)
+            ),
+            # Detalhes das pendentes (tarefas não concluídas)
+            pendentes_em_aberto=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='em aberto',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_atrasadas=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='atrasada',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_perto_prazo=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='perto do prazo',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_urgentes=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__urgente=True,
+                    tarefas__deletada=False
+                )
+            ),
+        )
+        return queryset
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        
-        # Parâmetros de pesquisa e ordenação
+        # Parâmetros de filtro e ordenação
         search = request.query_params.get('search')
         order_by = request.query_params.get('order_by')
         
-        # Filtro por nome se houver parâmetro 'search'
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por nome (similar ao 'search' que você já tinha)
         if search:
             queryset = queryset.filter(nome__icontains=search)
         
         # Ordenação
         if order_by:
-            if order_by == 'nome':
-                queryset = queryset.order_by(order_by)
+            # Campos permitidos para ordenação
+            allowed_order_fields = [
+                'id', 'nome', 
+                'total_tarefas', 'concluidas', 'pendentes',
+                'pendentes_em_aberto', 'pendentes_atrasadas', 
+                'pendentes_perto_prazo', 'pendentes_urgentes'
+            ]
+            
+            # Verifica se é ordenação descendente
+            if order_by.startswith('-'):
+                field_name = order_by[1:]
             else:
-                return Response({"error": "Campo de ordenação inválido. Use 'nome'."}, status=400)
+                field_name = order_by
+            
+            # Valida o campo de ordenação
+            if field_name not in allowed_order_fields:
+                return Response({
+                    "error": f"Campo de ordenação inválido. Campos permitidos: {', '.join(allowed_order_fields)}"
+                }, status=400)
+            
+            queryset = queryset.order_by(order_by)
         else:
             # Ordenação padrão por nome
             queryset = queryset.order_by('nome')
@@ -1031,6 +1102,7 @@ class TipoTarefaViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         
+        # Sem paginação
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -2221,3 +2293,109 @@ def representante_por_cliente(request, cliente_id):
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
+@csrf_exempt
+@permission_classes([IsAuthenticated])
+def generic_select_view(request):
+    """
+    Versão em função - retorna {value, label} para selects do frontend
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    try:
+        model_map = {
+            'processo': Processo,
+            'tipo_tarefa': TipoTarefa,
+            'advogado': Advogado,
+            'cliente': Cliente,
+            'parceiro': Parceiros,
+            'representante': Representante,
+            'escritorio': Escritorios,
+        }
+        
+        model_key = request.GET.get('model')
+        
+        if not model_key:
+            return JsonResponse({
+                "error": "Parâmetro 'model' é obrigatório",
+                "models_disponiveis": list(model_map.keys())
+            }, status=400)
+        
+        if model_key not in model_map:
+            return JsonResponse({
+                "error": f"Modelo '{model_key}' não disponível",
+                "models_disponiveis": list(model_map.keys())
+            }, status=400)
+        
+        model_class = model_map[model_key]
+        queryset = model_class.objects.all()
+        
+        # Filtra deletados
+        if hasattr(model_class, 'deletada'):
+            queryset = queryset.filter(deletada=False)
+        elif hasattr(model_class, 'ativo'):
+            queryset = queryset.filter(ativo=True)
+        
+        # Busca
+        search = request.GET.get('search', '')
+        if search:
+            # Tenta buscar por nome ou outros campos
+            if hasattr(model_class, 'nome'):
+                queryset = queryset.filter(nome__icontains=search)
+            elif hasattr(model_class, 'name'):
+                queryset = queryset.filter(name__icontains=search)
+            elif hasattr(model_class, 'razao_social'):
+                queryset = queryset.filter(razao_social__icontains=search)
+        
+        # Ordena
+        if hasattr(model_class, 'nome'):
+            queryset = queryset.order_by('nome')
+        elif hasattr(model_class, 'name'):
+            queryset = queryset.order_by('name')
+        else:
+            queryset = queryset.order_by('id')
+        
+        # Limite
+        limit = request.GET.get('limit')
+        if limit and limit.isdigit():
+            limit_int = int(limit)
+            queryset = queryset[:min(limit_int, 500)]
+        
+        # Formata resposta como {value, label}
+        data = []
+        for obj in queryset:
+            # Determina o texto do label
+            if hasattr(obj, 'nome'):
+                label = obj.nome
+            elif hasattr(obj, 'name'):
+                label = obj.name
+            elif hasattr(obj, 'razao_social'):
+                label = obj.razao_social
+            else:
+                label = str(obj)
+            
+            # Adiciona campos extras opcionais
+            extra_data = {}
+            
+            # Se quiser incluir o nome original também
+            include_nome = request.GET.get('include_nome')
+            if include_nome and include_nome.lower() == 'true':
+                extra_data['nome'] = label
+            
+            # Se quiser incluir campo específico
+            include_field = request.GET.get('include_field')
+            if include_field and hasattr(obj, include_field):
+                extra_data[include_field] = getattr(obj, include_field)
+            
+            data.append({
+                'value': obj.id,  # ← value é o ID
+                'label': label,   # ← label é o nome/texto
+                **extra_data  # Adiciona campos extras se houver
+            })
+        
+        return JsonResponse(data, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Erro interno: {str(e)}"
+        }, status=500)

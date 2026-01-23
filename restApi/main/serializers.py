@@ -225,9 +225,59 @@ class TarefasSerializer(serializers.ModelSerializer):
         
 
 class TipoTarefaSerializer(serializers.ModelSerializer):
+    # Campos calculados que serão populados via annotate
+    total_tarefas = serializers.IntegerField(read_only=True)
+    concluidas = serializers.IntegerField(read_only=True)
+    pendentes = serializers.IntegerField(read_only=True)
+    pendentes_em_aberto = serializers.IntegerField(read_only=True)
+    pendentes_atrasadas = serializers.IntegerField(read_only=True)
+    pendentes_perto_prazo = serializers.IntegerField(read_only=True)
+    pendentes_urgentes = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = TipoTarefa
-        fields = '__all__'
+        fields = [
+            'id', 'nome', 
+            'total_tarefas', 'concluidas', 'pendentes',
+            'pendentes_em_aberto', 'pendentes_atrasadas', 
+            'pendentes_perto_prazo', 'pendentes_urgentes'
+        ]
+    
+    def to_representation(self, instance):
+        # Chama o método padrão primeiro
+        data = super().to_representation(instance)
+        
+        # Extrai os valores
+        total_tarefas = data.pop('total_tarefas')
+        concluidas = data.pop('concluidas')
+        pendentes = data.pop('pendentes')
+        
+        # Cria a nova estrutura organizada
+        response_data = {
+            'id': data['id'],
+            'nome': data['nome'],
+            'estatisticas': {
+                'total': total_tarefas,
+                'concluidas': {
+                    'total': concluidas,
+                    # Se quiser adicionar percentual
+                    'percentual': f"{(concluidas / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
+                },
+                'pendentes': {
+                    'total': pendentes,
+                    'detalhes': {
+                        'em_aberto': data.pop('pendentes_em_aberto'),
+                        'atrasadas': data.pop('pendentes_atrasadas'),
+                        'perto_do_prazo': data.pop('pendentes_perto_prazo'),
+                        'urgentes': data.pop('pendentes_urgentes')
+                    },
+                    # Se quiser adicionar percentual
+                    'percentual': f"{(pendentes / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
+                }
+            }
+        }
+        
+        return response_data
 
 
         
@@ -261,3 +311,40 @@ class ArquivoTarefaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArquivoTarefa
         fields = '__all__'
+
+class GenericSelectSerializer(serializers.Serializer):
+    """
+    Serializer dinâmico para selects - retorna {value, label}
+    """
+    value = serializers.IntegerField(source='id', read_only=True)
+    label = serializers.SerializerMethodField()
+    
+    class Meta:
+        fields = ['value', 'label']
+    
+    def get_label(self, obj):
+        """
+        Obtém o texto para o label baseado nos campos disponíveis
+        """
+        # Ordem de preferência para o label
+        if hasattr(obj, 'nome'):
+            return obj.nome
+        elif hasattr(obj, 'name'):
+            return obj.name
+        elif hasattr(obj, 'razao_social'):
+            return obj.razao_social
+        elif hasattr(obj, 'titulo'):
+            return obj.titulo
+        elif hasattr(obj, 'descricao'):
+            return obj.descricao
+        else:
+            return str(obj)
+    
+    def to_representation(self, instance):
+        """
+        Formata a resposta como {value, label}
+        """
+        return {
+            'value': instance.id,
+            'label': self.get_label(instance)
+        }
