@@ -171,15 +171,34 @@ class ProcessoSerializer(serializers.ModelSerializer):
         
         
 class GrupoAcaoSerializer(serializers.ModelSerializer):
+    total_processos = serializers.IntegerField(read_only=True)
+    arquivados = serializers.IntegerField(read_only=True)
+    concluidos = serializers.IntegerField(read_only=True)
+    pendentes = serializers.IntegerField(read_only=True)
+    urgentes = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = GrupoAcao
-        fields = '__all__'
+        fields = [
+            'id', 'nome', 'total_processos', 'arquivados', 
+            'concluidos', 'pendentes', 'urgentes'
+        ]
 
 
 class TipoAcaoSerializer(serializers.ModelSerializer):
+    total_processos = serializers.IntegerField(read_only=True)
+    arquivados = serializers.IntegerField(read_only=True)
+    concluidos = serializers.IntegerField(read_only=True)
+    pendentes = serializers.IntegerField(read_only=True)
+    urgentes = serializers.IntegerField(read_only=True)
+    grupo_acao_nome = serializers.CharField(source='grupoAcao.nome', read_only=True)
+    
     class Meta:
         model = TipoAcao
-        fields = '__all__'
+        fields = [
+            'id', 'nome', 'grupoAcao', 'grupo_acao_nome', 'total_processos', 
+            'arquivados', 'concluidos', 'pendentes', 'urgentes'
+        ]
         
         
 class FaseProcessoSerializer(serializers.ModelSerializer):
