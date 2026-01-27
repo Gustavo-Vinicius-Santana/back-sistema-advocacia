@@ -202,15 +202,35 @@ class TipoAcaoSerializer(serializers.ModelSerializer):
         
         
 class FaseProcessoSerializer(serializers.ModelSerializer):
+    total_processos = serializers.IntegerField(read_only=True)
+    arquivados = serializers.IntegerField(read_only=True)
+    concluidos = serializers.IntegerField(read_only=True)
+    pendentes = serializers.IntegerField(read_only=True)
+    urgentes = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = FaseProcesso
-        fields = '__all__'
+        fields = [
+            'id', 'nome', 'total_processos', 'arquivados',
+            'concluidos', 'pendentes', 'urgentes'
+        ]
         
         
 class EtapaProcessoSerializer(serializers.ModelSerializer):
+    faseProcesso_nome = serializers.CharField(source='faseProcesso.nome', read_only=True)
+    total_processos = serializers.IntegerField(read_only=True)
+    arquivados = serializers.IntegerField(read_only=True)
+    concluidos = serializers.IntegerField(read_only=True)
+    pendentes = serializers.IntegerField(read_only=True)
+    urgentes = serializers.IntegerField(read_only=True)
+    
     class Meta:
         model = EtapaProcesso
-        fields = '__all__'
+        fields = [
+            'id', 'nome', 'faseProcesso', 'faseProcesso_nome',
+            'total_processos', 'arquivados', 'concluidos',
+            'pendentes', 'urgentes'
+        ]
 
 
 class TarefasSerializer(serializers.ModelSerializer):
