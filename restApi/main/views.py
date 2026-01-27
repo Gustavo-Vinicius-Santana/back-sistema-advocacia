@@ -2467,6 +2467,7 @@ def generic_select_view(request):
             'parceiro': Parceiros,
             'representante': Representante,
             'escritorio': Escritorios,
+            'grupo_acao': GrupoAcao,  # Adicionado aqui
         }
         
         model_key = request.GET.get('model')
@@ -2486,7 +2487,7 @@ def generic_select_view(request):
         model_class = model_map[model_key]
         queryset = model_class.objects.all()
         
-        # Filtra deletados
+        # Filtra deletados/ativos (GrupoAcao não tem estes campos, então será ignorado)
         if hasattr(model_class, 'deletada'):
             queryset = queryset.filter(deletada=False)
         elif hasattr(model_class, 'ativo'):
