@@ -10,7 +10,39 @@ SECRET_KEY = 'django-insecure-gop1+ud5cyvxp(t^rnmn9)=h1x22(#m&*-_v2=+qt$aa5)&+x2
 DEBUG = True
 
 # IMPORTANTE PARA DOCKER
-ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1"]
+if os.getenv('DOCKER') == '1':
+    print("🔄 Ambiente Docker detectado")
+    
+    ALLOWED_HOSTS = [
+        '*',                    # Aceita qualquer host
+        'restapi_django',       # Nome do container
+        'localhost',            # Para acessar do host
+        '127.0.0.1',
+        '0.0.0.0',
+        'host.docker.internal', # Host da máquina (para Windows/Mac)
+    ]
+    
+    # Patch para Docker
+    import django.http.request
+    django.http.request.host_validation_re = None
+    
+    original_get_host = django.http.HttpRequest.get_host
+    
+    def docker_get_host(self):
+        host = self.META.get('HTTP_HOST', 'restapi_django')
+        # Se for um host com porta, remove para validação
+        if ':' in host:
+            host_without_port = host.split(':')[0]
+            # Retorna o host original, mas valida sem porta
+            if host_without_port in ALLOWED_HOSTS or '*' in ALLOWED_HOSTS:
+                return host
+        return original_get_host(self)
+    
+    django.http.HttpRequest.get_host = docker_get_host
+
+else:
+    # Ambiente local (Django rodando localmente)
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
