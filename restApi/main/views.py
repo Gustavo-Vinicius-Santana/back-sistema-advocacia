@@ -2665,11 +2665,12 @@ def generic_select_view(request):
             'processo': Processo,
             'tipo_tarefa': TipoTarefa,
             'advogado': Advogado,
+            'advogado-online': Advogado,  # Nova query para advogados online
             'cliente': Cliente,
             'parceiro': Parceiros,
             'representante': Representante,
             'escritorio': Escritorios,
-            'grupo_acao': GrupoAcao,  # Adicionado aqui
+            'grupo_acao': GrupoAcao,
             'fase_processo': FaseProcesso,
         }
         
@@ -2688,13 +2689,22 @@ def generic_select_view(request):
             }, status=400)
         
         model_class = model_map[model_key]
-        queryset = model_class.objects.all()
         
-        # Filtra deletados/ativos (GrupoAcao não tem estes campos, então será ignorado)
-        if hasattr(model_class, 'deletada'):
-            queryset = queryset.filter(deletada=False)
-        elif hasattr(model_class, 'ativo'):
-            queryset = queryset.filter(ativo=True)
+        # Inicializa o queryset
+        if model_key == 'advogado-online':
+            # Filtra apenas advogados online
+            queryset = model_class.objects.filter(is_online=True, is_active=True)
+        else:
+            queryset = model_class.objects.all()
+            
+            # Filtra deletados/ativos (GrupoAcao não tem estes campos, então será ignorado)
+            if hasattr(model_class, 'deletada'):
+                queryset = queryset.filter(deletada=False)
+            elif hasattr(model_class, 'ativo'):
+                queryset = queryset.filter(ativo=True)
+            elif hasattr(model_class, 'is_active'):
+                # Para advogado normal, também filtra por is_active=True
+                queryset = queryset.filter(is_active=True)
         
         # Busca
         search = request.GET.get('search', '')
@@ -2746,6 +2756,11 @@ def generic_select_view(request):
             include_field = request.GET.get('include_field')
             if include_field and hasattr(obj, include_field):
                 extra_data[include_field] = getattr(obj, include_field)
+            
+            # Para advogado-online, pode incluir o status online
+            if model_key == 'advogado-online' or model_key == 'advogado':
+                extra_data['is_online'] = obj.is_online
+                extra_data['oab'] = obj.oab
             
             data.append({
                 'value': obj.id,  # ← value é o ID
