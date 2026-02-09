@@ -286,35 +286,60 @@ class TipoTarefaSerializer(serializers.ModelSerializer):
         # Chama o método padrão primeiro
         data = super().to_representation(instance)
         
-        # Extrai os valores
-        total_tarefas = data.pop('total_tarefas')
-        concluidas = data.pop('concluidas')
-        pendentes = data.pop('pendentes')
+        # Verifica se os campos calculados existem (só existem quando há annotate)
+        has_statistics = 'total_tarefas' in data
         
-        # Cria a nova estrutura organizada
-        response_data = {
-            'id': data['id'],
-            'nome': data['nome'],
-            'estatisticas': {
-                'total': total_tarefas,
-                'concluidas': {
-                    'total': concluidas,
-                    # Se quiser adicionar percentual
-                    'percentual': f"{(concluidas / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
-                },
-                'pendentes': {
-                    'total': pendentes,
-                    'detalhes': {
-                        'em_aberto': data.pop('pendentes_em_aberto'),
-                        'atrasadas': data.pop('pendentes_atrasadas'),
-                        'perto_do_prazo': data.pop('pendentes_perto_prazo'),
-                        'urgentes': data.pop('pendentes_urgentes')
+        if has_statistics:
+            # Extrai os valores
+            total_tarefas = data.pop('total_tarefas', 0)
+            concluidas = data.pop('concluidas', 0)
+            pendentes = data.pop('pendentes', 0)
+            
+            # Cria a nova estrutura organizada
+            response_data = {
+                'id': data['id'],
+                'nome': data['nome'],
+                'estatisticas': {
+                    'total': total_tarefas,
+                    'concluidas': {
+                        'total': concluidas,
+                        'percentual': f"{(concluidas / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
                     },
-                    # Se quiser adicionar percentual
-                    'percentual': f"{(pendentes / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
+                    'pendentes': {
+                        'total': pendentes,
+                        'detalhes': {
+                            'em_aberto': data.pop('pendentes_em_aberto', 0),
+                            'atrasadas': data.pop('pendentes_atrasadas', 0),
+                            'perto_do_prazo': data.pop('pendentes_perto_prazo', 0),
+                            'urgentes': data.pop('pendentes_urgentes', 0)
+                        },
+                        'percentual': f"{(pendentes / total_tarefas * 100):.1f}%" if total_tarefas > 0 else "0%"
+                    }
                 }
             }
-        }
+        else:
+            # Para criação ou quando não há estatísticas
+            response_data = {
+                'id': data['id'],
+                'nome': data['nome'],
+                'estatisticas': {
+                    'total': 0,
+                    'concluidas': {
+                        'total': 0,
+                        'percentual': "0%"
+                    },
+                    'pendentes': {
+                        'total': 0,
+                        'detalhes': {
+                            'em_aberto': 0,
+                            'atrasadas': 0,
+                            'perto_do_prazo': 0,
+                            'urgentes': 0
+                        },
+                        'percentual': "0%"
+                    }
+                }
+            }
         
         return response_data
 
