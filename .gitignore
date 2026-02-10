@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environment
 venv/
+ApiVenv/
 .env/
 *.env
 
@@ -20,7 +21,7 @@ staticfiles/
 *restApi/main/migrations/__pycache__/
 *restApi/main/migrations/*.pyc
 *restApi/main/migrations/*.pyo
-*restApi/main/migrations/*.pyd
+*restApi/main/migrations/
 
 # PyCharm
 .idea/
@@ -49,4 +50,5 @@ celerybeat-schedule
 # Other
 *.swp
 *.swo
-
+Insomnia_2025-04-22.yaml
+.dockerignore
