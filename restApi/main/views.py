@@ -27,6 +27,7 @@ from django.db.models.functions import ExtractDay, Now
 from django.db.models import ExpressionWrapper, F, IntegerField
 # Remova DurationField se não estiver usando
 from django.db.models import DateField
+import re
 
 
 
@@ -1780,20 +1781,93 @@ def processosClientes(request,cliente_id):
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt
-def processosClientesNome(request,cliente_nome):
+def processosClientesNome(request, cliente_nome):
     if request.method == 'GET':
         if not cliente_nome:
-            return JsonResponse({'error': 'Nome do cliente obrigatório.'}, status=400)
-        clientes = Cliente.objects.filvter(nome__icontains=cliente_nome)
-        if clientes is None: 
-            return JsonResponse({'error': 'Nenhum cliente encontrado com esse nome.'}, status=404)
-        processos = Processo.objects.filter(clienteId__in=clientes)
-        clienteSerializer = ClienteSerializer(clientes, many=True)
-        processosSerializer = ProcessoSerializer(processos, many=True)
-        jsonFile = {'clientes': clienteSerializer.data, 'processos': processosSerializer.data}
-        return JsonResponse(jsonFile, safe=False)
+            return JsonResponse({'error': 'Termo de busca obrigatório.'}, status=400)
+        
+        search_term = cliente_nome.strip()
+        
+        # Remove pontuação para busca numérica
+        numeros_only = re.sub(r'[^0-9]', '', search_term)
+        
+        # Se tem apenas números (mesmo que parciais) OU se a string original contém números
+        if numeros_only or any(c.isdigit() for c in search_term):
+            # Busca por CPF (qualquer parte do CPF)
+            clientes_por_cpf = Cliente.objects.filter(cpf__icontains=numeros_only) if numeros_only else Cliente.objects.none()
+            
+            # Busca por número do processo (qualquer parte do número)
+            processos_por_numero = Processo.objects.filter(numeroProcesso__icontains=search_term)
+            
+            # Busca por nome (se o termo também contém letras)
+            clientes_por_nome = Cliente.objects.none()
+            if any(c.isalpha() for c in search_term):
+                clientes_por_nome = Cliente.objects.filter(nome__icontains=search_term)
+            
+            # Combina os resultados de clientes (por CPF e por nome)
+            clientes = (clientes_por_cpf | clientes_por_nome).distinct()
+            
+            # Processos: combina os encontrados por número + processos dos clientes encontrados
+            processos_dos_clientes = Processo.objects.filter(clienteId__in=clientes) if clientes.exists() else Processo.objects.none()
+            processos = (processos_por_numero | processos_dos_clientes).distinct()
+            
+        else:
+            # Apenas letras - busca por nome do cliente
+            clientes = Cliente.objects.filter(nome__icontains=search_term)
+            processos = Processo.objects.filter(clienteId__in=clientes) if clientes.exists() else Processo.objects.none()
+        
+        # Se não encontrou nada
+        if not clientes.exists() and not processos.exists():
+            return JsonResponse({
+                'error': 'Nenhum resultado encontrado.',
+                'clientes': [],
+                'processos': [],
+                'total_clientes': 0,
+                'total_processos': 0
+            }, status=404)
+        
+        # Prepara os dados para retorno
+        response_data = {
+            'clientes': [],
+            'processos': [],
+            'total_clientes': clientes.count() if clientes else 0,
+            'total_processos': processos.count() if processos else 0
+        }
+        
+        # Processa clientes - GARANTINDO QUE É QUERYSET
+        if clientes and clientes.exists():
+            # Não converta para lista aqui! Mantenha como QuerySet
+            clientes_limitados = clientes[:10]
+            
+            # Verificação de segurança
+            if hasattr(clientes_limitados, 'values'):
+                # É um QuerySet, pode usar values()
+                response_data['clientes'] = list(clientes_limitados.values('id', 'nome', 'cpf'))
+            else:
+                # Se por algum motivo virou lista, constrói manualmente
+                response_data['clientes'] = [
+                    {'id': c.id, 'nome': c.nome, 'cpf': c.cpf} 
+                    for c in clientes_limitados
+                ]
+        
+        # Processa processos
+        if processos and processos.exists():
+            processos_limitados = processos.select_related('clienteId')[:10]
+            
+            processos_data = []
+            for processo in processos_limitados:
+                processos_data.append({
+                    'id': processo.id,
+                    'numero': processo.numeroProcesso,
+                    'nomeCliente': processo.clienteId.nome if processo.clienteId else None,
+                    'cpfCliente': processo.clienteId.cpf if processo.clienteId else None
+                })
+            response_data['processos'] = processos_data
+        
+        return JsonResponse(response_data, safe=False)
+    
     else:
-        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+        return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 
 @permission_classes([IsAuthenticated])
