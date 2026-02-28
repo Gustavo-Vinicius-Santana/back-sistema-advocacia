@@ -1869,6 +1869,216 @@ def processosClientesNome(request, cliente_nome):
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
+@csrf_exempt
+def searchSelect(request):
+    """
+    Endpoint para busca em selects com suporte a relações hierárquicas.
+    
+    Query params:
+    - search: termo de busca (opcional)
+    - tipo: grupo_acao, tipo_acao, fase_processo, etapa_processo (obrigatório)
+    - grupo_id: ID do grupo (obrigatório para tipo_acao)
+    - fase_id: ID da fase (obrigatório para etapa_processo)
+    - limit: limite de resultados (opcional, padrão 50)
+    """
+    
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    # Parâmetros obrigatórios
+    tipo = request.GET.get('tipo')
+    if not tipo:
+        return JsonResponse({
+            'error': 'Parâmetro "tipo" é obrigatório',
+            'tipos_disponiveis': ['grupo_acao', 'tipo_acao', 'fase_processo', 'etapa_processo']
+        }, status=400)
+    
+    # Valida o tipo
+    tipos_validos = ['grupo_acao', 'tipo_acao', 'fase_processo', 'etapa_processo']
+    if tipo not in tipos_validos:
+        return JsonResponse({
+            'error': f'Tipo "{tipo}" inválido',
+            'tipos_disponiveis': tipos_validos
+        }, status=400)
+    
+    # Parâmetros opcionais
+    search = request.GET.get('search', '')
+    limit = request.GET.get('limit', 50)
+    
+    try:
+        limit = int(limit)
+        if limit > 200:  # Limite máximo para não sobrecarregar
+            limit = 200
+    except ValueError:
+        limit = 50
+    
+    # Processa cada tipo
+    if tipo == 'grupo_acao':
+        return busca_grupo_acao(search, limit)
+    
+    elif tipo == 'tipo_acao':
+        # Para tipo_acao, precisamos do grupo_id
+        grupo_id = request.GET.get('grupo_id')
+        return busca_tipo_acao(search, grupo_id, limit)
+    
+    elif tipo == 'fase_processo':
+        return busca_fase_processo(search, limit)
+    
+    elif tipo == 'etapa_processo':
+        # Para etapa_processo, precisamos do fase_id
+        fase_id = request.GET.get('fase_id')
+        return busca_etapa_processo(search, fase_id, limit)
+    
+    return JsonResponse({'error': 'Erro interno'}, status=500)
+
+
+def busca_grupo_acao(search, limit):
+    """Busca em GrupoAcao"""
+    queryset = GrupoAcao.objects.all()
+    
+    # Filtro de busca
+    if search:
+        queryset = queryset.filter(nome__icontains=search)
+    
+    # Ordenação e limite
+    queryset = queryset.order_by('nome')[:limit]
+    
+    # Formata resposta
+    resultados = [{'id': obj.id, 'nome': obj.nome} for obj in queryset]
+    
+    return JsonResponse({
+        'tipo': 'grupo_acao',
+        'resultados': resultados,
+        'total': len(resultados)
+    })
+
+
+def busca_tipo_acao(search, grupo_id, limit):
+    """Busca em TipoAcao, com filtro opcional por grupo"""
+    queryset = TipoAcao.objects.all()
+    
+    # Validação: se grupo_id foi fornecido, filtra por ele
+    if grupo_id:
+        try:
+            grupo_id = int(grupo_id)
+            # Verifica se o grupo existe (opcional, mas recomendado)
+            if not GrupoAcao.objects.filter(id=grupo_id).exists():
+                return JsonResponse({
+                    'error': f'Grupo com ID {grupo_id} não encontrado',
+                    'tipo': 'tipo_acao'
+                }, status=404)
+            
+            queryset = queryset.filter(grupoAcao_id=grupo_id)
+        except ValueError:
+            return JsonResponse({
+                'error': 'grupo_id deve ser um número válido',
+                'tipo': 'tipo_acao'
+            }, status=400)
+    else:
+        # Se não forneceu grupo_id, retorna todos (ou pode retornar erro)
+        # Vou retornar todos, mas você pode mudar para retornar erro se preferir
+        pass
+    
+    # Filtro de busca
+    if search:
+        queryset = queryset.filter(nome__icontains=search)
+    
+    # Ordenação e limite
+    queryset = queryset.order_by('nome')[:limit]
+    
+    # Formata resposta com informação extra do grupo
+    resultados = []
+    for obj in queryset:
+        item = {
+            'id': obj.id,
+            'nome': obj.nome,
+            'grupo_id': obj.grupoAcao_id,
+            'grupo_nome': obj.grupoAcao.nome if obj.grupoAcao else None
+        }
+        resultados.append(item)
+    
+    return JsonResponse({
+        'tipo': 'tipo_acao',
+        'resultados': resultados,
+        'total': len(resultados),
+        'filtro_aplicado': {
+            'grupo_id': grupo_id
+        }
+    })
+
+
+def busca_fase_processo(search, limit):
+    """Busca em FaseProcesso"""
+    queryset = FaseProcesso.objects.all()
+    
+    # Filtro de busca
+    if search:
+        queryset = queryset.filter(nome__icontains=search)
+    
+    # Ordenação e limite
+    queryset = queryset.order_by('nome')[:limit]
+    
+    # Formata resposta
+    resultados = [{'id': obj.id, 'nome': obj.nome} for obj in queryset]
+    
+    return JsonResponse({
+        'tipo': 'fase_processo',
+        'resultados': resultados,
+        'total': len(resultados)
+    })
+
+
+def busca_etapa_processo(search, fase_id, limit):
+    """Busca em EtapaProcesso, com filtro opcional por fase"""
+    queryset = EtapaProcesso.objects.all()
+    
+    # Validação: se fase_id foi fornecido, filtra por ele
+    if fase_id:
+        try:
+            fase_id = int(fase_id)
+            # Verifica se a fase existe
+            if not FaseProcesso.objects.filter(id=fase_id).exists():
+                return JsonResponse({
+                    'error': f'Fase com ID {fase_id} não encontrada',
+                    'tipo': 'etapa_processo'
+                }, status=404)
+            
+            queryset = queryset.filter(faseProcesso_id=fase_id)
+        except ValueError:
+            return JsonResponse({
+                'error': 'fase_id deve ser um número válido',
+                'tipo': 'etapa_processo'
+            }, status=400)
+    else:
+        # Se não forneceu fase_id, retorna todos
+        pass
+    
+    # Filtro de busca
+    if search:
+        queryset = queryset.filter(nome__icontains=search)
+    
+    # Ordenação e limite
+    queryset = queryset.order_by('nome')[:limit]
+    
+    # Formata resposta com informação extra da fase
+    resultados = []
+    for obj in queryset:
+        item = {
+            'id': obj.id,
+            'nome': obj.nome,
+            'fase_id': obj.faseProcesso_id,
+            'fase_nome': obj.faseProcesso.nome if obj.faseProcesso else None
+        }
+        resultados.append(item)
+    
+    return JsonResponse({
+        'tipo': 'etapa_processo',
+        'resultados': resultados,
+        'total': len(resultados),
+        'filtro_aplicado': {
+            'fase_id': fase_id
+        }
+    })
 
 @permission_classes([IsAuthenticated])
 @csrf_exempt

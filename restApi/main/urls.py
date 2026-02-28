@@ -74,4 +74,5 @@ urlpatterns = [
     
     path('select/', views.generic_select_view, name='generic-select'),
 
+    path('search-select/', views.searchSelect, name='search-select'),
 ]
