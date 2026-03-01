@@ -1875,10 +1875,9 @@ def searchSelect(request):
     Endpoint para busca em selects com suporte a relações hierárquicas.
     
     Query params:
-    - search: termo de busca (opcional)
+    - search: termo de busca (opcional - vazio retorna todos)
     - tipo: grupo_acao, tipo_acao, fase_processo, etapa_processo (obrigatório)
-    - grupo_id: ID do grupo (obrigatório para tipo_acao)
-    - fase_id: ID da fase (obrigatório para etapa_processo)
+    - id: ID do grupo (para tipo_acao) ou ID da fase (para etapa_processo) (opcional)
     - limit: limite de resultados (opcional, padrão 50)
     """
     
@@ -1903,6 +1902,7 @@ def searchSelect(request):
     
     # Parâmetros opcionais
     search = request.GET.get('search', '')
+    id_param = request.GET.get('id')  # Parâmetro único 'id' vindo do front
     limit = request.GET.get('limit', 50)
     
     try:
@@ -1917,17 +1917,15 @@ def searchSelect(request):
         return busca_grupo_acao(search, limit)
     
     elif tipo == 'tipo_acao':
-        # Para tipo_acao, precisamos do grupo_id
-        grupo_id = request.GET.get('grupo_id')
-        return busca_tipo_acao(search, grupo_id, limit)
+        # Para tipo_acao, o id se refere ao grupo_id
+        return busca_tipo_acao(search, id_param, limit)
     
     elif tipo == 'fase_processo':
         return busca_fase_processo(search, limit)
     
     elif tipo == 'etapa_processo':
-        # Para etapa_processo, precisamos do fase_id
-        fase_id = request.GET.get('fase_id')
-        return busca_etapa_processo(search, fase_id, limit)
+        # Para etapa_processo, o id se refere ao fase_id
+        return busca_etapa_processo(search, id_param, limit)
     
     return JsonResponse({'error': 'Erro interno'}, status=500)
 
@@ -1936,7 +1934,7 @@ def busca_grupo_acao(search, limit):
     """Busca em GrupoAcao"""
     queryset = GrupoAcao.objects.all()
     
-    # Filtro de busca
+    # Filtro de busca - se search vazio, retorna todos
     if search:
         queryset = queryset.filter(nome__icontains=search)
     
@@ -1953,15 +1951,15 @@ def busca_grupo_acao(search, limit):
     })
 
 
-def busca_tipo_acao(search, grupo_id, limit):
-    """Busca em TipoAcao, com filtro opcional por grupo"""
+def busca_tipo_acao(search, id_param, limit):
+    """Busca em TipoAcao, com filtro opcional por grupo usando o id_param"""
     queryset = TipoAcao.objects.all()
     
-    # Validação: se grupo_id foi fornecido, filtra por ele
-    if grupo_id:
+    # Filtro por grupo (opcional)
+    if id_param:
         try:
-            grupo_id = int(grupo_id)
-            # Verifica se o grupo existe (opcional, mas recomendado)
+            grupo_id = int(id_param)
+            # Verifica se o grupo existe
             if not GrupoAcao.objects.filter(id=grupo_id).exists():
                 return JsonResponse({
                     'error': f'Grupo com ID {grupo_id} não encontrado',
@@ -1971,15 +1969,11 @@ def busca_tipo_acao(search, grupo_id, limit):
             queryset = queryset.filter(grupoAcao_id=grupo_id)
         except ValueError:
             return JsonResponse({
-                'error': 'grupo_id deve ser um número válido',
+                'error': 'id deve ser um número válido',
                 'tipo': 'tipo_acao'
             }, status=400)
-    else:
-        # Se não forneceu grupo_id, retorna todos (ou pode retornar erro)
-        # Vou retornar todos, mas você pode mudar para retornar erro se preferir
-        pass
     
-    # Filtro de busca
+    # Filtro de busca - se search vazio, retorna todos (respeitando filtro de grupo)
     if search:
         queryset = queryset.filter(nome__icontains=search)
     
@@ -2002,7 +1996,7 @@ def busca_tipo_acao(search, grupo_id, limit):
         'resultados': resultados,
         'total': len(resultados),
         'filtro_aplicado': {
-            'grupo_id': grupo_id
+            'id': id_param
         }
     })
 
@@ -2011,7 +2005,7 @@ def busca_fase_processo(search, limit):
     """Busca em FaseProcesso"""
     queryset = FaseProcesso.objects.all()
     
-    # Filtro de busca
+    # Filtro de busca - se search vazio, retorna todos
     if search:
         queryset = queryset.filter(nome__icontains=search)
     
@@ -2028,14 +2022,14 @@ def busca_fase_processo(search, limit):
     })
 
 
-def busca_etapa_processo(search, fase_id, limit):
-    """Busca em EtapaProcesso, com filtro opcional por fase"""
+def busca_etapa_processo(search, id_param, limit):
+    """Busca em EtapaProcesso, com filtro opcional por fase usando o id_param"""
     queryset = EtapaProcesso.objects.all()
     
-    # Validação: se fase_id foi fornecido, filtra por ele
-    if fase_id:
+    # Filtro por fase (opcional)
+    if id_param:
         try:
-            fase_id = int(fase_id)
+            fase_id = int(id_param)
             # Verifica se a fase existe
             if not FaseProcesso.objects.filter(id=fase_id).exists():
                 return JsonResponse({
@@ -2046,14 +2040,11 @@ def busca_etapa_processo(search, fase_id, limit):
             queryset = queryset.filter(faseProcesso_id=fase_id)
         except ValueError:
             return JsonResponse({
-                'error': 'fase_id deve ser um número válido',
+                'error': 'id deve ser um número válido',
                 'tipo': 'etapa_processo'
             }, status=400)
-    else:
-        # Se não forneceu fase_id, retorna todos
-        pass
     
-    # Filtro de busca
+    # Filtro de busca - se search vazio, retorna todos (respeitando filtro de fase)
     if search:
         queryset = queryset.filter(nome__icontains=search)
     
@@ -2076,7 +2067,7 @@ def busca_etapa_processo(search, fase_id, limit):
         'resultados': resultados,
         'total': len(resultados),
         'filtro_aplicado': {
-            'fase_id': fase_id
+            'id': id_param
         }
     })
 
