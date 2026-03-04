@@ -495,7 +495,8 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             elif field == 'dataContrato':
                 # Filtro por data específica
                 try:
-                    data_valor = parse_datetime(value) or parse_date(value)
+                    # Precisa de teste posteriormente
+                    data_valor = datetime(value) or date(value)
                     if data_valor:
                         data_inicio_dia = timezone.make_aware(datetime.combine(data_valor, datetime.min.time()))
                         data_fim_dia = timezone.make_aware(datetime.combine(data_valor, datetime.max.time()))
@@ -577,13 +578,15 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             else:
                 try:
                     if data_inicio:
-                        data_inicio_valor = parse_datetime(data_inicio) or parse_date(data_inicio)
+                        # Precisa de teste posteriormente 2
+                        data_inicio_valor = datetime(data_inicio) or date(data_inicio)
                         if data_inicio_valor:
                             data_inicio_dt = timezone.make_aware(datetime.combine(data_inicio_valor, datetime.min.time()))
                             queryset = queryset.filter(dataContrato__gte=data_inicio_dt)
                     
                     if data_fim:
-                        data_fim_valor = parse_datetime(data_fim) or parse_date(data_fim)
+                        # Precisa de teste posteriormente 3
+                        data_fim_valor = datetime(data_fim) or date(data_fim)
                         if data_fim_valor:
                             data_fim_dt = timezone.make_aware(datetime.combine(data_fim_valor, datetime.max.time()))
                             queryset = queryset.filter(dataContrato__lte=data_fim_dt)
@@ -633,7 +636,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
                             queryset = queryset.order_by(order_by)
                     else:
                         queryset = queryset.order_by(order_by)
-            except FieldError as e:
+            except Exception as e:
                 return Response({"error": f"Campo de ordenação inválido: {str(e)}"}, status=400)
         else:
             queryset = queryset.order_by('-prioritario', 'dataContrato')
@@ -863,6 +866,11 @@ class TipoAcaoViewSet(viewsets.ModelViewSet):
     
     
 class FaseProcessoViewSet(viewsets.ModelViewSet):
+    """
+    Faz uma pesquisa e retorna uma lista de processos de acordo com os parâmetros fornecidos.
+    
+    
+    """
     queryset = FaseProcesso.objects.all()
     serializer_class = FaseProcessoSerializer
     permission_classes = [IsAuthenticated]
