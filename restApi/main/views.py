@@ -1495,7 +1495,25 @@ class ArquivoTarefaViewSet(viewsets.ModelViewSet):
     
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    
 
+    @classmethod
+    def get_token(cls, advogado):
+        token = super().get_token(advogado)
+        
+        # Adicione as informações do advogado ao token
+        token['advogado_id'] = advogado.id
+        token['advogado_nome'] = advogado.nome
+        token['advogado_email'] = advogado.email
+        advogado.is_online = True
+        advogado.save()
+        
+             
+        return token
+    
+   
+    
+        
                     
 class ArquivoModelClienteIdView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1524,8 +1542,8 @@ class AdvogadosOnlineView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        advogados = Advogado.objects.filter(is_online=True)
-        serializer = AdvogadoSerializer(advogados, many=True)
+        advogados_online = Advogado.objects.filter(is_online=True)
+        serializer = AdvogadoSerializer(advogados_online, many=True)
         return Response(serializer.data)
 
 
