@@ -44,6 +44,11 @@ class ClienteViewSet(viewsets.ModelViewSet):
     pagination_class = standardResultsSetPagination
     
     def list(self, request, *args, **kwargs):
+        from django.db.models import Q
+        from django.db.models import Value
+        from django.db.models.functions import Replace
+        import re
+        
         dataAtual = timezone.now().date()
 
         # Intervalo para quem está dentro de ±5 dias de completar 65 anos
@@ -81,7 +86,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             processos_total_count=Count('processo')
         ).order_by('-prioridade', 'id')
         
-        # Filtro por contrato (novo parâmetro)
+        # Filtro por contrato
         contrato_param = request.query_params.get('contrato')
         if contrato_param is not None:
             if contrato_param.lower() in ['true', '1', 'yes']:
@@ -105,8 +110,55 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 return Response({"error": "Campo de filtro inválido."}, status=400)
 
             # Campos simples
-            if field in ['nome', 'cpf', 'telefone', 'inss']:
+            if field in ['nome', 'telefone', 'inss']:
                 queryset = queryset.filter(**{f"{field}__icontains": value})
+            
+            # Campo CPF - tratamento especial para aceitar com ou sem pontuação
+            elif field == 'cpf':
+                # SOLUÇÃO 1: Usando Q objects com múltiplas possibilidades (mais simples)
+                cpf_query = Q()
+                
+                # Busca com o valor original (funciona se digitou com pontuação)
+                if value:
+                    cpf_query |= Q(cpf__icontains=value)
+                
+                # Remove pontuação do termo de busca
+                numeros_only = re.sub(r'[^\d]', '', value)
+                
+                if numeros_only:
+                    # Busca por qualquer CPF que contenha esses números (considerando o campo como está)
+                    cpf_query |= Q(cpf__icontains=numeros_only)
+                    
+                    # Se tiver 11 dígitos, cria o formato com pontuação e busca
+                    if len(numeros_only) == 11:
+                        cpf_formatado1 = f"{numeros_only[:3]}.{numeros_only[3:6]}.{numeros_only[6:9]}-{numeros_only[9:]}"
+                        cpf_formatado2 = f"{numeros_only[:3]}{numeros_only[3:6]}{numeros_only[6:9]}{numeros_only[9:]}"
+                        cpf_query |= Q(cpf__icontains=cpf_formatado1)
+                        cpf_query |= Q(cpf__icontains=cpf_formatado2)
+                    
+                    # SOLUÇÃO 2: Mais robusta - busca em todos os clientes e filtra em Python
+                    # (garante que encontra mesmo com formatações diferentes)
+                    if not Cliente.objects.filter(cpf_query).exists():
+                        todos_clientes = Cliente.objects.all()
+                        clientes_encontrados = []
+                        
+                        for cliente in todos_clientes:
+                            if cliente.cpf:
+                                # Remove pontuação do CPF do banco
+                                cpf_banco_limpo = re.sub(r'[^\d]', '', cliente.cpf)
+                                # Verifica se os números buscados estão contidos no CPF limpo
+                                if numeros_only in cpf_banco_limpo:
+                                    clientes_encontrados.append(cliente.id)
+                        
+                        if clientes_encontrados:
+                            queryset = queryset.filter(id__in=clientes_encontrados)
+                        else:
+                            queryset = queryset.none()
+                    else:
+                        queryset = queryset.filter(cpf_query)
+                else:
+                    # Se não tem números, usa a query normal
+                    queryset = queryset.filter(cpf_query)
 
             # Campo composto (parceiro)
             elif field == 'parceiro':
@@ -123,22 +175,16 @@ class ClienteViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
             
-            # Calcular dias para 65 anos manualmente para cada cliente
+            # Calcular dias para 65 anos
             for item in response.data['results']:
                 if item.get('dataNascimento'):
-                    # Parse da data de nascimento
                     data_nasc_str = item['dataNascimento']
-                    # Pode vir em diferentes formatos dependendo do serializer
                     if isinstance(data_nasc_str, str):
                         data_nasc = datetime.strptime(data_nasc_str, '%Y-%m-%d').date()
                     else:
-                        # Se já for um objeto date
                         data_nasc = data_nasc_str
                     
-                    # Calcular data de 65 anos
                     data_65 = data_nasc + relativedelta(years=65)
-                    
-                    # Calcular dias restantes
                     dias_para_65 = (data_65 - dataAtual).days
                     item['dias_para_65'] = dias_para_65
                 else:
@@ -1805,6 +1851,12 @@ def processosClientes(request,cliente_id):
         
         
 
+def limpar_cpf(cpf):
+    """Remove pontuação do CPF para comparação"""
+    if not cpf:
+        return ''
+    return re.sub(r'[^\d]', '', str(cpf))
+
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 def processosClientesNome(request, cliente_nome):
@@ -1814,33 +1866,56 @@ def processosClientesNome(request, cliente_nome):
         
         search_term = cliente_nome.strip()
         
-        # Remove pontuação para busca numérica
-        numeros_only = re.sub(r'[^0-9]', '', search_term)
+        # Limita o tamanho da busca
+        if len(search_term) > 100:
+            return JsonResponse({'error': 'Termo de busca muito longo.'}, status=400)
         
-        # Se tem apenas números (mesmo que parciais) OU se a string original contém números
-        if numeros_only or any(c.isdigit() for c in search_term):
-            # Busca por CPF (qualquer parte do CPF)
-            clientes_por_cpf = Cliente.objects.filter(cpf__icontains=numeros_only) if numeros_only else Cliente.objects.none()
+        # Prepara termo numérico (sem pontuação)
+        numeros_only = re.sub(r'[^\d]', '', search_term)
+        
+        # Busca clientes
+        clientes_encontrados = []
+        processos_encontrados = []
+        
+        # Busca por nome (se tiver letras)
+        if any(c.isalpha() for c in search_term):
+            clientes_nome = Cliente.objects.filter(nome__icontains=search_term)
+            clientes_encontrados.append(clientes_nome)
+        
+        # Busca por CPF (compara sem pontuação)
+        if numeros_only:
+            # Busca em todos os clientes e filtra por CPF sem pontuação
+            todos_clientes = Cliente.objects.all()
+            clientes_cpf = []
             
-            # Busca por número do processo (qualquer parte do número)
-            processos_por_numero = Processo.objects.filter(numeroProcesso__icontains=search_term)
+            for cliente in todos_clientes:
+                if cliente.cpf and numeros_only in limpar_cpf(cliente.cpf):
+                    clientes_cpf.append(cliente.id)
             
-            # Busca por nome (se o termo também contém letras)
-            clientes_por_nome = Cliente.objects.none()
-            if any(c.isalpha() for c in search_term):
-                clientes_por_nome = Cliente.objects.filter(nome__icontains=search_term)
-            
-            # Combina os resultados de clientes (por CPF e por nome)
-            clientes = (clientes_por_cpf | clientes_por_nome).distinct()
-            
-            # Processos: combina os encontrados por número + processos dos clientes encontrados
-            processos_dos_clientes = Processo.objects.filter(clienteId__in=clientes) if clientes.exists() else Processo.objects.none()
-            processos = (processos_por_numero | processos_dos_clientes).distinct()
-            
-        else:
-            # Apenas letras - busca por nome do cliente
-            clientes = Cliente.objects.filter(nome__icontains=search_term)
-            processos = Processo.objects.filter(clienteId__in=clientes) if clientes.exists() else Processo.objects.none()
+            if clientes_cpf:
+                clientes_encontrados.append(Cliente.objects.filter(id__in=clientes_cpf))
+        
+        # Combina resultados de clientes
+        clientes = Cliente.objects.none()
+        for qs in clientes_encontrados:
+            clientes = clientes | qs
+        clientes = clientes.distinct()
+        
+        # Busca processos por número
+        if search_term:
+            processos_numero = Processo.objects.filter(numeroProcesso__icontains=search_term)
+            processos_encontrados.append(processos_numero)
+        
+        # Busca processos dos clientes encontrados
+        if clientes.exists():
+            processos_clientes = Processo.objects.filter(clienteId__in=clientes)
+            processos_encontrados.append(processos_clientes)
+        
+        # Combina processos
+        processos = Processo.objects.none()
+        for qs in processos_encontrados:
+            processos = processos | qs
+        processos = processos.distinct()
         
         # Se não encontrou nada
         if not clientes.exists() and not processos.exists():
@@ -1852,48 +1927,40 @@ def processosClientesNome(request, cliente_nome):
                 'total_processos': 0
             }, status=404)
         
-        # Prepara os dados para retorno
+        # Prepara resposta
         response_data = {
             'clientes': [],
             'processos': [],
-            'total_clientes': clientes.count() if clientes else 0,
-            'total_processos': processos.count() if processos else 0
+            'total_clientes': clientes.count(),
+            'total_processos': processos.count()
         }
         
-        # Processa clientes - GARANTINDO QUE É QUERYSET
-        if clientes and clientes.exists():
-            # Não converta para lista aqui! Mantenha como QuerySet
-            clientes_limitados = clientes[:10]
-            
-            # Verificação de segurança
-            if hasattr(clientes_limitados, 'values'):
-                # É um QuerySet, pode usar values()
-                response_data['clientes'] = list(clientes_limitados.values('id', 'nome', 'cpf'))
-            else:
-                # Se por algum motivo virou lista, constrói manualmente
-                response_data['clientes'] = [
-                    {'id': c.id, 'nome': c.nome, 'cpf': c.cpf} 
-                    for c in clientes_limitados
-                ]
+        # Adiciona clientes (limite 10)
+        if clientes.exists():
+            for cliente in clientes[:10]:
+                response_data['clientes'].append({
+                    'id': cliente.id,
+                    'nome': cliente.nome,
+                    'cpf': cliente.cpf  # Mantém o formato original
+                })
         
-        # Processa processos
-        if processos and processos.exists():
-            processos_limitados = processos.select_related('clienteId')[:10]
-            
-            processos_data = []
-            for processo in processos_limitados:
-                processos_data.append({
+        # Adiciona processos (limite 10)
+        if processos.exists():
+            for processo in processos.select_related('clienteId')[:10]:
+                cliente = processo.clienteId
+                response_data['processos'].append({
                     'id': processo.id,
                     'numero': processo.numeroProcesso,
-                    'nomeCliente': processo.clienteId.nome if processo.clienteId else None,
-                    'cpfCliente': processo.clienteId.cpf if processo.clienteId else None
+                    'titulo': processo.titulo,
+                    'status': processo.status,
+                    'nomeCliente': cliente.nome if cliente else None,
+                    'cpfCliente': cliente.cpf if cliente else None,
+                    'clienteId': cliente.id if cliente else None
                 })
-            response_data['processos'] = processos_data
         
-        return JsonResponse(response_data, safe=False)
+        return JsonResponse(response_data)
     
-    else:
-        return JsonResponse({'error': 'Método não permitido.'}, status=405)
+    return JsonResponse({'error': 'Método não permitido.'}, status=405)
 
 @csrf_exempt
 def searchSelect(request):
