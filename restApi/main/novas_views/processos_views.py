@@ -2,12 +2,17 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from main.serializers import ProcessoSerializer,FaseProcessoSerializer,EtapaProcessoSerializer
-from main.models import Processo, FaseProcesso, EtapaProcesso
+from main.serializers import ProcessoSerializer,FaseProcessoSerializer,EtapaProcessoSerializer, ProcesssosResumidoSerializer
+from main.models import Processo, FaseProcesso, EtapaProcesso,Cliente
 from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.http import JsonResponse
 from datetime import timedelta, date, datetime
 from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+import re
+import json
 
 class standardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -517,3 +522,316 @@ class EtapaProcessoViewSet(viewsets.ModelViewSet):
         # Sem paginação
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    
+#view para buscar processos por campo específico
+class BuscarProcessoCampoView(APIView):
+    permission_classes = [IsAuthenticated]
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
+    pagination_class = standardResultsSetPagination
+    
+    def get(self, request):
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        
+        if not field or not value:
+            raise ValidationError({
+                "error": "Os campos 'field' e 'value' são obrigatórios."
+            })
+        if field not in self.alowed_field:
+            raise ValidationError({
+                "error": f"O campo '{field}' não é permitido para busca."
+            })
+        if not order_by:
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by('id')
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by('id')
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
+            
+        else:
+            if field == 'advogadoCriadorId':
+                queryset = Processo.objects.filter(
+                    advogadoCriadorId__nome__icontains=value
+                ).order_by(order_by)
+            elif field == 'clienteId':
+                queryset = Processo.objects.filter(
+                    clienteId__nome__icontains=value
+                ).order_by(order_by)
+            else:
+                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
+        return Response(ProcessoSerializer(queryset, many=True).data)   
+
+
+class ProcessosClientesView(APIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Processo.objects.all()
+    serializer_class = ProcessoSerializer
+    def get(request,cliente_id):
+        if not cliente_id:
+            return JsonResponse({'error':'Ciente não encontrado'})
+        try:
+            cliente = get_object_or_404(Cliente, id =cliente_id)
+        except:
+            return JsonResponse({'error':'Cliente nao encontrado'}, status=400)
+        processos = Processo.objects.filter(clienteId=cliente)
+        serializer = ProcessoSerializer(processos, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    
+    
+class ProcessosClientesNomeView(APIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Processo.objects.all()
+    serializer_class = ProcessoSerializer
+    
+    def get(self,request,cliente_nome):
+        if not cliente_nome:
+            return JsonResponse({'error': 'Termo de busca obrigatório.'}, status=400)
+        
+        search_term = cliente_nome.strip()
+        
+        # Limita o tamanho da busca
+        if len(search_term) > 100:
+            return JsonResponse({'error': 'Termo de busca muito longo.'}, status=400)
+        
+        # Prepara termo numérico (sem pontuação)
+        numeros_only = re.sub(r'[^\d]', '', search_term)
+        
+        # Busca clientes
+        clientes_encontrados = []
+        processos_encontrados = []
+        
+        # Busca por nome (se tiver letras)
+        if any(c.isalpha() for c in search_term):
+            clientes_nome = Cliente.objects.filter(nome__icontains=search_term)
+            clientes_encontrados.append(clientes_nome)
+        
+        # Busca por CPF (compara sem pontuação)
+        if numeros_only:
+            # Busca em todos os clientes e filtra por CPF sem pontuação
+            todos_clientes = Cliente.objects.all()
+            clientes_cpf = []
+            
+            for cliente in todos_clientes:
+                if cliente.cpf and numeros_only in self.limpar_cpf(cliente.cpf):
+                    clientes_cpf.append(cliente.id)
+            
+            if clientes_cpf:
+                clientes_encontrados.append(Cliente.objects.filter(id__in=clientes_cpf))
+        
+        # Combina resultados de clientes
+        clientes = Cliente.objects.none()
+        for qs in clientes_encontrados:
+            clientes = clientes | qs
+        clientes = clientes.distinct()
+        
+        # Busca processos por número
+        if search_term:
+            processos_numero = Processo.objects.filter(numeroProcesso__icontains=search_term)
+            processos_encontrados.append(processos_numero)
+        
+        # Busca processos dos clientes encontrados
+        if clientes.exists():
+            processos_clientes = Processo.objects.filter(clienteId__in=clientes)
+            processos_encontrados.append(processos_clientes)
+        
+        # Combina processos
+        processos = Processo.objects.none()
+        for qs in processos_encontrados:
+            processos = processos | qs
+        processos = processos.distinct()
+        
+        # Se não encontrou nada
+        if not clientes.exists() and not processos.exists():
+            return JsonResponse({
+                'error': 'Nenhum resultado encontrado.',
+                'clientes': [],
+                'processos': [],
+                'total_clientes': 0,
+                'total_processos': 0
+            }, status=404)
+        
+        # Prepara resposta
+        response_data = {
+            'clientes': [],
+            'processos': [],
+            'total_clientes': clientes.count(),
+            'total_processos': processos.count()
+        }
+        
+        # Adiciona clientes (limite 10)
+        if clientes.exists():
+            for cliente in clientes[:10]:
+                response_data['clientes'].append({
+                    'id': cliente.id,
+                    'nome': cliente.nome,
+                    'cpf': cliente.cpf  # Mantém o formato original
+                })
+        
+        # Adiciona processos (limite 10)
+        if processos.exists():
+            for processo in processos.select_related('clienteId')[:10]:
+                cliente = processo.clienteId
+                response_data['processos'].append({
+                    'id': processo.id,
+                    'numero': processo.numeroProcesso,
+                    'titulo': processo.titulo,
+                    'status': processo.status,
+                    'nomeCliente': cliente.nome if cliente else None,
+                    'cpfCliente': cliente.cpf if cliente else None,
+                    'clienteId': cliente.id if cliente else None
+                })
+        
+        return JsonResponse(response_data)
+    
+    def limpar_cpf(self,cpf):
+        if not cpf:
+            return ''
+        return re.sub(r'[^\d]', '', str(cpf))
+        
+        
+
+class ProcessosArquivados(APIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Processo.objects.all()
+    serializr_class = ProcessoSerializer
+    
+    def get(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        serializer = ProcessoSerializer(processo)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    def put(request, processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    def patch(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não arquivado.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    
+    
+    def delete(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,status='arquivado')
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo nao encontrado ou nao arquivado.'},status=404)
+        processo.delete()
+        return JsonResponse({'message': 'Processo excluido com sucesso'}, status=201)
+    
+    
+class ProcessosAdvogado(APIView):
+    queryset = Processo.objects.all()
+    serializer_class = ProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get(request,advogado_id):
+        if not advogado_id:
+            return JsonResponse({'error': 'ID do advogado é obrigatório.'})
+        try:
+            processo = Processo.objects.filter(advogadoResponsavelId=advogado_id)   
+        except:
+            return JsonResponse({'error': 'Advogado nao encontrado.'})
+        serializer = ProcessoSerializer(processo, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+
+
+class ProcessosResumidos(APIView):
+    queryset = Processo.objects.all()
+    serializer_class = ProcesssosResumidoSerializer
+    permission_classes = [IsAuthenticated]
+    def get(request):
+        processos = Processo.objects.all()
+        serializer = ProcesssosResumidoSerializer(processos,many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile,safe=False)
+    
+    
+    
+class ProcessosConcluidosEspecificos(APIView):
+    queryset = Processo.objects.all()
+    serializer_class = ProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    def get(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        serializer = ProcessoSerializer(processo)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+    def put(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+    def patch(request,processo_id):
+        if not processo_id:
+            return JsonResponse({'error': 'ID do processo é obrigatório.'},status=400)
+        try:
+            processo = Processo.objects.get(id=processo_id,concluido=True)
+        except Processo.DoesNotExist:
+            return JsonResponse({'error': 'Processo não encontrado ou não concluído.'},status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'})
+        serializer = ProcessoSerializer(processo, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+        
