@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, date, time
 from dateutil.relativedelta import relativedelta
 from rest_framework.pagination import PageNumberPagination
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.exceptions import FieldError
 from rest_framework.exceptions import ValidationError
 from django.db.models.functions import ExtractDay, Now
 from django.db.models import ExpressionWrapper, F, IntegerField
@@ -2366,10 +2367,6 @@ def tarefasProcesso(request,processo_id):
 def tarefasDeletadas(request):
     if request.method == 'GET':
         tarefas = Tarefas.objects.filter(deletada=True)
-        try:
-            tarefas = Tarefas.objects.filter(deletada=True)
-        except:
-            return JsonResponse({'error': 'Nenhuma tarefa deletada encontrada.'}, status=404)
         serializer = TarefasSerializer(tarefas, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
