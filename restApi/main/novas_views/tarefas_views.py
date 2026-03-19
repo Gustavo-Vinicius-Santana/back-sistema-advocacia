@@ -472,6 +472,16 @@ class TarefasDeletadasEspecificasView(APIView):
         tarefas.delete()
         return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=200)
 
+class HistoriccoTarefasView(APIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Tarefas.objects.filter(deletada=True)
+    
+    def get(self, request):
+        historico = HistoricoTarefas.objects.all()
+        serializer = HistoricoTarefasSerializer(historico, many=True)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+
 
 class HistoricoTarefasEspecificosView(APIView):
     permission_classes = [IsAuthenticated]
@@ -499,3 +509,46 @@ class HistoricoTarefasEspecificosView(APIView):
         historico.delete()
         return JsonResponse({'message': 'Histórico excluído com sucesso.'}, status=204)
     
+    
+class TarefasConcluidasEspecificasView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    
+    def get(request,tarefa_id:int):
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,concluida = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa nao encontrada ou nao concluida.'}, status=404)
+        
+        serializer = TarefasSerializer(tarefa)
+        jsonFile = serializer.data
+        return JsonResponse(jsonFile, safe=False)
+        
+    def put(request,tarefa_id:int):
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,concluida = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa nao encontrada ou nao concluida.'}, status=404)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Dados inválidos.'}, status=400)
+        serializer = TarefasSerializer(tarefa, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+        
+    def delete(request,tarefa_id:int):
+        if not tarefa_id:
+            return JsonResponse({'error': 'ID da tarefa obrigatório.'}, status=400)     
+        try:
+            tarefa = Tarefas.objects.get(id=tarefa_id,concluida = True)  
+        except Tarefas.DoesNotExist:
+            return JsonResponse({'error': 'Tarefa nao encontrada ou nao concluida.'}, status=404)
+        tarefa.delete()
+        return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=200)

@@ -2502,11 +2502,7 @@ def historicoTarefasEspecificos(request,tarefa_id):
 def historicoTarefas(request):
     if request.method == 'GET':
     
-        try:
-            historico = HistoricoTarefas.objects.all()  
-        except HistoricoTarefas.DoesNotExist:
-            return JsonResponse({'error': 'Histórico não encontrado.'}, status=404)
-    
+        historico = HistoricoTarefas.objects.all()
         serializer = HistoricoTarefasSerializer(historico, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
