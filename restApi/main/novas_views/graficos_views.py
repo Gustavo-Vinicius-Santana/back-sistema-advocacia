@@ -6,7 +6,7 @@ from django.db.models import Count
 
 
 
-class GraficosProcessosView(APIView):
+class GraficosProcessosTipoView(APIView):
     
     permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
@@ -166,7 +166,7 @@ class GraficoTarefasStatusView(APIView):
         return JsonResponse(jsonFile, safe=False)
 
 
-class GraficosTarefasAdvogado(APIView):
+class GraficosTarefasAdvogadoView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
         advogados = Advogado.objects.all()

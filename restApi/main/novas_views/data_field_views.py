@@ -95,7 +95,7 @@ class BuscarProcessoCampoView(APIView):
         return Response(ProcessoSerializer(queryset, many=True).data)   
 
 
-class BuscarTarefaCampo(APIView):
+class BuscarTarefaCampoView(APIView):
     permission_classes = [IsAuthenticated]
     alowed_field = ['advogadoCriadorId','advogadoResponsavelId','processoOrigemId']
 
@@ -338,7 +338,7 @@ class BuscaParceirosSelectView(APIView):
     
     
 
-class BuscaRepresentantesPorCliente(APIView):
+class BuscarRepresentantesPorClienteView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(request,cliente_id):

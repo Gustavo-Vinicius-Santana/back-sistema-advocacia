@@ -75,3 +75,18 @@ class EmailRequestSenha(APIView):
         message =f'CLIQUE NO LINK PARA RESETAR SUA SENHA: http://127.0.0.1:3000/recovery/newPassword/{refresh}'
         emailSender.sendMensage('Resetar Senha', message)
         return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
+
+        
+    
+class ValidateResetTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(request,token):
+        try:
+            refresh = RefreshToken(token)
+            if refresh.payload.get("purpose") != "reset_password":
+                return JsonResponse({'valid': False}, status=200)
+            return JsonResponse({'valid': True}, status=200)
+        except InvalidTokenError:
+            return JsonResponse({'valid': False}, status=200)
+    

@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
+from .novas_views import *
 
 router = DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet)
@@ -23,54 +24,38 @@ router.register(r'arquivoTarefa', views.ArquivoTarefaViewSet, basename='arquivoT
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('token/', views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
-    path('token/resetValidate/<str:token>', views.validate_reset_token_endpoint, name='validate_reset_token_endpoint'),
+    path('token/', auth_views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
+    path('token/resetValidate/<str:token>', auth_views.ValidateResetTokenView.as_view(), name='validate_reset_token_endpoint'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('registrarAdvogado/', views.registrarAdv, name='registrarAdv'),
-    path('emailRequestSenha/', views.emailRequestSenha, name='emailRequestSenha'),
-    path('resetPassword/<path:token>', views.resetPassword, name='resetPassword'),
-    path('cliente/<int:cliente_id>/processos/', views.processosClientes, name='processosClientes'), # DEPRECTED,
-    path('clientes/buscar/',views.BuscarClienteCamposView.as_view(), name='buscarClienteCamposView') ,
-    path('clientesSemContrato/', views.clientesSemContrato, name='clientesSemContrato'), # DEPRECTED,
+    path('registrarAdvogado/', advogados_views.AdvogadoRegisterView.as_view(), name='registrarAdv'),
+    path('emailRequestSenha/', auth_views.EmailRequestSenha.as_view(), name='emailRequestSenha'),
+    path('resetPassword/<path:token>', auth_views.ResetPasswordView.as_view(), name='resetPassword'),
+    path('clientes/buscar/',data_field_views.BuscarClienteCamposView.as_view(), name='buscarClienteCamposView') ,
     #path('clientes65/', views.clientes65, name='clientes65'),
-    path('processos/<int:processo_id>/tarefas/', views.tarefasProcesso, name='tarefasProcesso'), # DEPRECTED,
-    path('processosConcluidos/<int:processo_id>/', views.processosConcluidosEspecificos, name='processosConcluidosEspecificos'), # DEPRECTED,,
-    path('processosClientesNome/<str:cliente_nome>/', views.processosClientesNome, name='processosClientesNome') ,
-    path('processos/buscar/',views.BuscarProcessoCampoView.as_view(), name='buscarProcessoCamposView'), # DEPRECTED,,
-    path('advogados/<int:advogado_id>/processos/', views.processosAdvogado, name='processosAdvogado'),# DEPRECTED,,
-    path('advogados/resumido/', views.advogadosResumido, name= 'advogadosResumido'), # DEPRECTED,,
-    path('advogados/<int:advogado_id>/dashboard/', views.advogadosDashboard, name= 'advogadosDashboard' ),
-    path('processos/resumido/', views.processosResumido, name= 'processosResumido'), # DEPRECTED,,
-    path('tarefas/advogado/<int:advogado_id>/', views.tarefasAdvogadoCriador, name='tarefasAdvogadoCriador'), # DEPRECTED
-    path('advogado/current-user/',views.advUserInfo, name='advUserInfo'),
-    path('advogadosOnline/', views.AdvogadosOnlineView.as_view(), name='advogadosOnline'), # DEPRECTED,,
-    path('advogados/<int:advogado_id>/clientesEspera/',views.clientesEsperaAdv, name='clientesEsperaAdv'),
-    path('advogados/logout/', views.AdvogadoLogoutView.as_view(), name='advogadosLogout'),
-    path('arquivoModel/cliente/<int:cliente>/', views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
-    path('arquivoTarefa/tarefa/<int:tarefa>/', views.ArquivoTarefaIdView.as_view(), name='arquivoTarefaTarefaId'),
-    path('tarefasConcluidas/<int:tarefa_id>/', views.tarefasConcluidasEspecificas, name='tarefasConcluidasEspecificas'), # DEPRECTED,,
-    path('historicoTarefas/<int:tarefa_id>/', views.historicoTarefasEspecificos, name='historicoTarefasEspecificos'),
-    path('historicoTarefas/', views.historicoTarefas, name='historicoTarefas'),
-    path('tarefasDeletadas/',views.tarefasDeletadas, name='tarefasDeletadas'), # DEPRECTED,,
-    path('tarefas/buscar/',views.BuscarTarefaCampo.as_view(), name='buscarTarefaCamposView'), # DEPRECTED,,   
-    path('tarefasDeletadas/<int:tarefa_id>/',views.tarefasDeletadasEspecificas, name='tarefasDeletadasEspecificas'), # DEPRECTED,,
-    path('processosArquivados/', views.processosArquivados, name='processosArquivados'), # DEPRECTED,,
-    path('processosArquivados/<int:processo_id>/', views.processosArquivadosEspecificos, name='processosArquivadosEspecificos'), # DEPRECTED,,
-    path('graficos/processos/tipo/', views.graficoProcessosTipo, name='graficoProcessosTipo'),
-    path('graficos/processos/grupo/', views.graficoProcessosGrupo, name='graficoProcessosGrupo'),
-    path('graficos/processos/status/', views.graficoProcessosStatus, name='graficoProcessosStatus'),
-    path('graficos/processos/fase/', views.graficosProcessosFase, name='graficosProcessosFase'),
-    path('graficos/processos/peticionarProtocolar/', views.graficosProcessosProtocolarPeticionar, name='graficoProcessosPeticionarProtocolar'),
-    path('graficos/clientes/contrato/', views.graficoClientesContrato, name='graficoClientesContrato'),
-    path('graficos/clientes/parceiro/', views.graficoClientesParceiro, name='graficoClientesParceiro'),
-    path('graficos/tarefas/status/', views.graficoTarefasStatus, name='graficoTarefasStatus'),
-    path('graficos/tarefas/advogados/', views.graficoTarefasAdvogado, name='graficoTarefasAdvogados'),
-    path('etapas/<int:fase_id>/fase/', views.etapasPorFase, name='etapasPorFase'), # DEPRECTED
-    path('tiposAcao/<int:grupo_id>/grupo/', views.tipoPorGrupo, name='tiposAcaoPorGrupo'), # DEPRECTED,
+    path('processosClientesNome/<str:cliente_nome>/', processos_views.ProcessosClientesNomeView.as_view(), name='processosClientesNome') ,
+    #mudança no endpoint abaixo, antes era /advogados/advogado_id/dashboard/
+    path('advogados/dashboard/<int:advogado_id>/', advogados_views.AdvogadosDashboardView.as_view(), name= 'advogadosDashboard' ),
+    path('advogado/current-user/',advogados_views.AdvogadoUserInfoView.as_view(), name='advUserInfo'),
+    path('advogados/<int:advogado_id>/clientesEspera/',cliente_views.ClienteEsperaAdvView.as_view(), name='clientesEsperaAdv'),
+    path('advogados/logout/', advogados_views.AdvogadoLogoutView.as_view(), name='advogadosLogout'),
+    path('arquivoModel/cliente/<int:cliente>/', data_field_views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
+    path('arquivoTarefa/tarefa/<int:tarefa>/', data_field_views.ArquivoTarefaIdView.as_view(), name='arquivoTarefaTarefaId'),
+    path('historicoTarefas/<int:tarefa_id>/', tarefas_views.HistoricoTarefasEspecificosView.as_view(), name='historicoTarefasEspecificos'),
+    path('historicoTarefas/', tarefas_views.HistoricoTarefasView.as_view(), name='historicoTarefas'),
+    path('graficos/processos/tipo/', graficos_views.GraficosProcessosTipoView.as_view(), name='graficoProcessosTipo'),
+    path('graficos/processos/grupo/', graficos_views.GraficosProcessosGrupoView.as_view(), name='graficoProcessosGrupo'),
+    path('graficos/processos/status/', graficos_views.GraficoProcessosStatusView.as_view(), name='graficoProcessosStatus'),
+    path('graficos/processos/fase/', graficos_views.GraficosProcessosFaseView.as_view(),name='graficosProcessosFase'),
+    path('graficos/processos/peticionarProtocolar/', graficos_views.GraficosProcessosProtocolarPeticionarView.as_view(), name='graficoProcessosPeticionarProtocolar'),
+    path('graficos/clientes/contrato/', graficos_views.GraficosClientesContratosView.as_view(), name='graficoClientesContrato'),
+    path('graficos/clientes/parceiro/', graficos_views.GraficoClientesParceirosView.as_view(), name='graficoClientesParceiro'),
+    path('graficos/tarefas/status/', graficos_views.GraficoTarefasStatusView.as_view(), name='graficoTarefasStatus'),
+    path('graficos/tarefas/advogados/', graficos_views.GraficosTarefasAdvogadoView.as_view(), name='graficoTarefasAdvogados'),
+
     
     # ENDPOINTS NOVOS
-    path('parceiro/select/', views.parceiros_select, name='parceiros-select'),
-    path('cliente/<int:cliente_id>/representante/', views.representante_por_cliente, name='representante-por-cliente'),
+    path('parceiro/select/', data_field_views.BuscaParceirosSelectView.as_view(), name='parceiros-select'),
+    path('cliente/<int:cliente_id>/representante/', data_field_views.BuscarRepresentantesPorClienteView.as_view(), name='representante-por-cliente'),
     
     path('select/', views.generic_select_view, name='generic-select'),
 

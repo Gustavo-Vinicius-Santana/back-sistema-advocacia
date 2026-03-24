@@ -472,7 +472,7 @@ class TarefasDeletadasEspecificasView(APIView):
         tarefas.delete()
         return JsonResponse({'message': 'Tarefa excluida com sucesso.'}, status=200)
 
-class HistoriccoTarefasView(APIView):
+class HistoricoTarefasView(APIView):
     permission_classes = [IsAuthenticated]
     queryset = Tarefas.objects.filter(deletada=True)
     

@@ -178,7 +178,7 @@ class AdvogadosDashboardView(APIView):
             'tarefasPendentes': tarefasPendentes,
             'processosAtivos': processosAtivos,
             'processosConcluidos': processosConcluidos,
-        },safe=True)
+        })
         
         
     
