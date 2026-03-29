@@ -150,35 +150,41 @@ class AdvogadosResumidoView(APIView):
 
 
 class AdvogadosDashboardView(APIView):
-    permission_classes = [IsAuthenticated]  
-    queryset = Advogado.objects.all()
-    
-    def get(self, request, advogado_id):
-        if not advogado_id:
-            return Response({'error': 'ID do advogado é obrigatório.'})     
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
         try:
-            advogado = Advogado.objects.get(id=advogado_id)
-        except Advogado.DoesNotExist:
-            return Response({'error': 'Advogado nao encontrado.'})
-        try:
-            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado_id)
-        except:
-            return Response({'error': 'Advogado nao encontrado.'})
-        processosAtivos = Processo.objects.filter(advogadoCriadorId=advogado_id, status='ativo').exclude(concluido=True).count()
-        
-        if not tarefas.exists():
-            return Response({'error': 'Nenhuma tarefa encontrada com esse advogado.'})
-        
-        tarefasConcluidas = tarefas.filter(concluida=True).count()
-        tarefasPendentes = tarefas.filter(concluida=False).count()
-        processosConcluidos = Processo.objects.filter(advogadoCriadorId=advogado_id, concluido=True).count()
-        
-        return Response({
-            'tarefasConcluidas':tarefasConcluidas,
-            'tarefasPendentes': tarefasPendentes,
-            'processosAtivos': processosAtivos,
-            'processosConcluidos': processosConcluidos,
-        })
+            advogado = request.user
+
+            # Tarefas do advogado
+            tarefas = Tarefas.objects.filter(advogadoResponsavelId=advogado.id)
+
+            tarefasConcluidas = tarefas.filter(concluida=True).count()
+            tarefasPendentes = tarefas.filter(concluida=False).count()
+
+            # Processos
+            processosAtivos = Processo.objects.filter(
+                advogadoCriadorId=advogado.id,
+                status='ativo'
+            ).exclude(concluido=True).count()
+
+            processosConcluidos = Processo.objects.filter(
+                advogadoCriadorId=advogado.id,
+                concluido=True
+            ).count()
+
+            return Response({
+                'tarefasConcluidas': tarefasConcluidas,
+                'tarefasPendentes': tarefasPendentes,
+                'processosAtivos': processosAtivos,
+                'processosConcluidos': processosConcluidos,
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         
     
@@ -186,7 +192,7 @@ class AdvogadoUserInfoView(APIView):
     permission_classes = [IsAuthenticated]
     queryset = Advogado.objects.all()
     
-    def get(request):
+    def get(self, request, *args, **kwargs):
         token = request.headers.get('Authorization')
         if not token:
             return Response({'error': 'Token nao encontrado.'})

@@ -35,7 +35,7 @@ urlpatterns = [
     path('processosClientesNome/<str:cliente_nome>/', processos_views.ProcessosClientesNomeView.as_view(), name='processosClientesNome') ,
     #mudança no endpoint abaixo, antes era /advogados/advogado_id/dashboard/
     path('advogados/dashboard/<int:advogado_id>/', advogados_views.AdvogadosDashboardView.as_view(), name= 'advogadosDashboard' ),
-    path('advogado/current-user/',advogados_views.AdvogadoUserInfoView.as_view(), name='advUserInfo'),
+    path('advogado/current-user/',advogados_views.AdvogadoUserInfoView.as_view(), name='advUserInfo'), #dando erro
     path('advogados/<int:advogado_id>/clientesEspera/',cliente_views.ClienteEsperaAdvView.as_view(), name='clientesEsperaAdv'),
     path('advogados/logout/', advogados_views.AdvogadoLogoutView.as_view(), name='advogadosLogout'),
     path('arquivoModel/cliente/<int:cliente>/', data_field_views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
