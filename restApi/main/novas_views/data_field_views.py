@@ -341,17 +341,21 @@ class BuscaParceirosSelectView(APIView):
 class BuscarRepresentantesPorClienteView(APIView):
     permission_classes = [IsAuthenticated]
     
-    def get(request,cliente_id):
-        cliente = Cliente.objects.get(id=cliente_id)
+    def get(self, request, cliente_id):
+        cliente = Cliente.objects.filter(id=cliente_id).first()
+        
         if not cliente:
             return JsonResponse({
-                "error":"Cliente nao encontrado"
-            })
-        representante = Representante.objects.filter(cliente=cliente_id).first()
+                "error": "Cliente nao encontrado"
+            }, status=404)
+        
+        representante = Representante.objects.filter(cliente=cliente).first()
+        
         if not representante:
             return JsonResponse({
-                "error":"Nenhum representante econtrado"
-            },status=404)
+                "error": "Nenhum representante encontrado"
+            }, status=404)
+        
         serializer = RepresentanteSerializer(representante)
         return JsonResponse(serializer.data, safe=False)
     
