@@ -16,40 +16,7 @@ from django.http import JsonResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 
-class BuscarClienteCamposView(APIView):
-    permission_classes = [IsAuthenticated]
-    alowed_field = ['nome','cpf','telefone','inss','parceiro']
-    pagination_class = StandardResultsSetPagination
-    def get(self, request):
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
-        
-        if not field or not value: 
-            raise ValueError({
-                "error": "Os campos 'field' e 'value' são obrigatórios."
-            })
-        if field not in self.alowed_field:
-            raise ValueError({
-                "error": f"O campo '{field}' não é permitido para busca."
-            })
-        if not order_by:
-            if field == 'parceiro':
-                queryset = Cliente.objects.filter(
-                    parceiro__nome__icontains=value
-                ).order_by('id')  
-            else:     
-                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by('id')
-        else:
-            if field == 'parceiro':
-                queryset = Cliente.objects.filter(
-                    parceiro__nome__icontains=value
-                ).order_by(order_by)
-            else:
-                queryset = Cliente.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
-        return Response(ClienteSerializer(queryset, many=True).data)
 
-#view para buscar processos por campo específico
 class BuscarProcessoCampoView(APIView):
     permission_classes = [IsAuthenticated]
     alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']

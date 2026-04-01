@@ -8,12 +8,8 @@ router = DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet)
 router.register(r'advogados', views.AdvogadoViewSet)
 router.register(r'processos', views.ProcessoViewSet)
-router.register(r'gruposAcao', views.GrupoAcaoViewSet, basename='gruposAcao')
-router.register(r'tiposAcao', views.TipoAcaoViewSet, basename='tiposAcao')
 router.register(r'fasesProcesso', views.FaseProcessoViewSet, basename='fasesProcesso')
-router.register(r'etapasProcesso', views.EtapaProcessoViewSet, basename='etapasProcesso')
 router.register(r'tarefas', views.TarefasViewSet)
-router.register(r'tipoTarefa', views.TipoTarefaViewSet, basename='tipoTarefa')
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
 router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
 router.register(r'representantes', views.RepresentanteViewSet,basename='representantes')
@@ -30,7 +26,6 @@ urlpatterns = [
     path('registrarAdvogado/', advogados_views.AdvogadoRegisterView.as_view(), name='registrarAdv'),
     path('emailRequestSenha/', auth_views.EmailRequestSenha.as_view(), name='emailRequestSenha'),
     path('resetPassword/<path:token>', auth_views.ResetPasswordView.as_view(), name='resetPassword'),
-    path('clientes/buscar/',data_field_views.BuscarClienteCamposView.as_view(), name='buscarClienteCamposView') ,
     #path('clientes65/', views.clientes65, name='clientes65'),
     path('processosClientesNome/<str:cliente_nome>/', processos_views.ProcessosClientesNomeView.as_view(), name='processosClientesNome') ,
     #mudança no endpoint abaixo, antes era /advogados/advogado_id/dashboard/
