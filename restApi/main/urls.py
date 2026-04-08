@@ -8,8 +8,12 @@ router = DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet)
 router.register(r'advogados', views.AdvogadoViewSet)
 router.register(r'processos', views.ProcessoViewSet)
-router.register(r'fasesProcesso', views.FaseProcessoViewSet, basename='fasesProcesso')
+router.register(r'gruposAcao', data_field_views.GrupoAcaoViewSet, basename='gruposAcao')
+router.register(r'tiposAcao', data_field_views.TipoAcaoViewSet, basename='tiposAcao')
+router.register(r'fasesProcesso', data_field_views.FaseProcessoViewSet, basename='fasesProcesso')
+router.register(r'etapasProcesso', data_field_views.EtapaProcessoViewSet, basename='etapasProcesso')
 router.register(r'tarefas', views.TarefasViewSet)
+router.register(r'tipoTarefa', data_field_views.TipoTarefaViewSet, basename='tipoTarefa')
 router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
 router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
 router.register(r'representantes', views.RepresentanteViewSet,basename='representantes')
@@ -27,14 +31,14 @@ urlpatterns = [
     path('emailRequestSenha/', auth_views.EmailRequestSenha.as_view(), name='emailRequestSenha'),
     path('resetPassword/<path:token>', auth_views.ResetPasswordView.as_view(), name='resetPassword'),
     #path('clientes65/', views.clientes65, name='clientes65'),
-    path('processosClientesNome/<str:cliente_nome>/', processos_views.ProcessosClientesNomeView.as_view(), name='processosClientesNome') ,
+    path('processosClientesNome/<str:cliente_nome>/', data_field_views.ProcessosClientesNomeView.as_view(), name='processosClientesNome'), # deve estar no dominio data field
     #mudança no endpoint abaixo, antes era /advogados/advogado_id/dashboard/
     path('advogados/dashboard/<int:advogado_id>/', advogados_views.AdvogadosDashboardView.as_view(), name= 'advogadosDashboard' ),
     path('advogado/current-user/',advogados_views.AdvogadoUserInfoView.as_view(), name='advUserInfo'), #dando erro
     path('advogados/<int:advogado_id>/clientesEspera/',cliente_views.ClienteEsperaAdvView.as_view(), name='clientesEsperaAdv'),
     path('advogados/logout/', advogados_views.AdvogadoLogoutView.as_view(), name='advogadosLogout'),
-    path('arquivoModel/cliente/<int:cliente>/', data_field_views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
-    path('arquivoTarefa/tarefa/<int:tarefa>/', data_field_views.ArquivoTarefaIdView.as_view(), name='arquivoTarefaTarefaId'),
+    path('arquivoModel/cliente/<int:cliente>/', views.ArquivoModelClienteIdView.as_view(), name='arquivoModelClienteId'),
+    path('arquivoTarefa/tarefa/<int:tarefa>/', views.ArquivoTarefaIdView.as_view(), name='arquivoTarefaTarefaId'),
     path('historicoTarefas/<int:tarefa_id>/', tarefas_views.HistoricoTarefasEspecificosView.as_view(), name='historicoTarefasEspecificos'),
     path('historicoTarefas/', tarefas_views.HistoricoTarefasView.as_view(), name='historicoTarefas'),
     path('graficos/processos/tipo/', graficos_views.GraficosProcessosTipoView.as_view(), name='graficoProcessosTipo'),
@@ -46,13 +50,10 @@ urlpatterns = [
     path('graficos/clientes/parceiro/', graficos_views.GraficoClientesParceirosView.as_view(), name='graficoClientesParceiro'),
     path('graficos/tarefas/status/', graficos_views.GraficoTarefasStatusView.as_view(), name='graficoTarefasStatus'),
     path('graficos/tarefas/advogados/', graficos_views.GraficosTarefasAdvogadoView.as_view(), name='graficoTarefasAdvogados'),
-
     
-    # ENDPOINTS NOVOS
-    path('parceiro/select/', data_field_views.BuscaParceirosSelectView.as_view(), name='parceiros-select'),
     path('cliente/<int:cliente_id>/representante/', data_field_views.BuscarRepresentantesPorClienteView.as_view(), name='representante-por-cliente'),
     
-    path('select/', views.generic_select_view, name='generic-select'),
+    path('select/', views.generic_select_view, name='generic-select'), # deve estar no dominio data field,
 
-    path('search-select/', views.searchSelect, name='search-select'),
+    path('search-select/', views.searchSelect, name='search-select'), # deve estar no dominio data field,
 ]

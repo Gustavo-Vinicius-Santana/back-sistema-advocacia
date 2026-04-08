@@ -1,8 +1,9 @@
 
+import re
 from rest_framework.permissions import IsAuthenticated
 from .pagination_views import StandardResultsSetPagination
 from ..models import Advogado,Escritorios,TipoTarefa,Representante,Parceiros,Tarefas,Cliente,Processo,GrupoAcao,TipoAcao,FaseProcesso,EtapaProcesso,Documentos,ArquivoModel,ArquivoTarefa,Tarefas,Cliente,GrupoAcao,TipoAcao,FaseProcesso,EtapaProcesso,Documentos,ArquivoModel,ArquivoTarefa,Processo
-from ..serializers import GrupoAcaoSerializer,TipoAcaoSerializer,RepresentanteSerializer,TarefasSerializer,ClienteSerializer, FaseProcessoSerializer,EtapaProcessoSerializer,DocumentosSerializer,ArquivoModelSerializer,ArquivoTarefaSerializer,ProcessoSerializer
+from ..serializers import GrupoAcaoSerializer,TipoAcaoSerializer,RepresentanteSerializer,TarefasSerializer,ClienteSerializer, FaseProcessoSerializer,EtapaProcessoSerializer,DocumentosSerializer,ArquivoModelSerializer,ArquivoTarefaSerializer,ProcessoSerializer,TipoTarefaSerializer
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.db.models import Count, Q
@@ -17,97 +18,623 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 
 
-class BuscarProcessoCampoView(APIView):
+class GrupoAcaoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar Grupos de Ação.
+    
+    Endpoint: /api/gruposAcao/
+    
+    Parâmetros GET:
+    - field: Campo para filtrar (valores permitidos: 'nome')
+    - value: Valor para buscar no campo especificado
+    - order_by: Campo para ordenação (valores permitidos: 'total_processos', '-total_processos', 
+      'arquivados', '-arquivados', 'concluidos', '-concluidos', 'pendentes', '-pendentes', 
+      'urgentes', '-urgentes', 'nome', '-nome')
+    
+    Campos annotados disponíveis:
+    - total_processos: Número total de processos associados
+    - arquivados: Processos com status 'arquivado'
+    - concluidos: Processos marcados como concluídos
+    - pendentes: Processos não concluídos e com status 'ativo'
+    - urgentes: Processos prioritários não concluídos e com status 'ativo'
+    
+    Métodos HTTP permitidos: GET, POST, PUT, PATCH, DELETE
+    Autenticação: Requer usuário autenticado
+    Paginação: Padrão (StandardResultsSetPagination)
+    """
+    queryset = GrupoAcao.objects.all()
+    serializer_class = GrupoAcaoSerializer
     permission_classes = [IsAuthenticated]
-    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
+    pagination_class = StandardResultsSetPagination  # Adiciona a paginação
+    
+    def get_queryset(self):
+        """
+        Annota o queryset com as contagens de processos.
+        """
+        queryset = GrupoAcao.objects.annotate(
+            total_processos=Count(
+                'processo',
+                distinct=True,
+            ),
+            arquivados=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__status='arquivado')
+            ),
+            concluidos=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=True)
+            ),
+            pendentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            ),
+            urgentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__prioritario=True) & 
+                       Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            )
+        )
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro e ordenação
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+
+        # Campos permitidos para busca
+        allowed_fields = ['nome']
+        
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por campo e valor
+        if field and value:
+            if field not in allowed_fields:
+                return Response({"error": "Campo de filtro inválido."}, status=400)
+
+            # Filtro por nome
+            if field == 'nome':
+                queryset = queryset.filter(nome__icontains=value)
+        
+        # Ordenação
+        if order_by:
+            # Permite ordenar pelos campos annotados também
+            annotate_fields = [
+                'total_processos', '-total_processos',
+                'arquivados', '-arquivados',
+                'concluidos', '-concluidos',
+                'pendentes', '-pendentes',
+                'urgentes', '-urgentes'
+            ]
+            
+            if order_by in annotate_fields:
+                queryset = queryset.order_by(order_by)
+            else:
+                # Ordenação por campos do modelo
+                if order_by.startswith('-'):
+                    field_name = order_by[1:]
+                    if field_name in ['nome']:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by(order_by)
+                else:
+                    if order_by in ['nome']:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by(order_by)
+        else:
+            queryset = queryset.order_by('nome')  # Ordenação padrão por nome
+        
+        # Paginação
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)  
+
+class TipoAcaoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar Tipos de Ação.
+    
+    Endpoint: /api/tiposAcao/
+    
+    Parâmetros GET:
+    - field: Campo para filtrar (valores permitidos: 'nome', 'grupoAcao')
+    - value: Valor para buscar no campo especificado
+    - order_by: Campo para ordenação (valores permitidos: 'total_processos', '-total_processos', 
+      'arquivados', '-arquivados', 'concluidos', '-concluidos', 'pendentes', '-pendentes', 
+      'urgentes', '-urgentes', 'id', '-id', 'nome', '-nome', 'grupoAcao__nome', '-grupoAcao__nome')
+    
+    Campos annotados disponíveis:
+    - total_processos: Número total de processos associados
+    - arquivados: Processos com status 'arquivado'
+    - concluidos: Processos marcados como concluídos
+    - pendentes: Processos não concluídos e com status 'ativo'
+    - urgentes: Processos prioritários não concluídos e com status 'ativo'
+    
+    Métodos HTTP permitidos: GET, POST, PUT, PATCH, DELETE
+    Autenticação: Requer usuário autenticado
+    Paginação: Padrão (StandardResultsSetPagination)
+    """
+    queryset = TipoAcao.objects.all()
+    serializer_class = TipoAcaoSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination  # Adiciona paginação
+    
+    def get_queryset(self):
+        """
+        Annota o queryset com as contagens de processos.
+        """
+        queryset = TipoAcao.objects.annotate(
+            total_processos=Count(
+                'processo',
+                distinct=True,
+            ),
+            arquivados=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__status='arquivado')
+            ),
+            concluidos=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=True)
+            ),
+            pendentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            ),
+            urgentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__prioritario=True) & 
+                       Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            )
+        ).select_related('grupoAcao')  # Otimiza consultas relacionadas
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        # Campos permitidos para busca
+        allowed_fields = ['nome', 'grupoAcao']
+        
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por campo e valor
+        if field and value:
+            if field not in allowed_fields:
+                raise ValidationError({
+                    "error": f"O campo '{field}' não é permitido para busca."
+                })
+            
+            # Filtro especial para grupoAcao
+            if field == 'grupoAcao':
+                queryset = queryset.filter(grupoAcao__nome__icontains=value)
+            else:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+        
+        # Ordenação
+        if order_by:
+            # Permite ordenar pelos campos annotados
+            annotate_fields = [
+                'total_processos', '-total_processos',
+                'arquivados', '-arquivados',
+                'concluidos', '-concluidos',
+                'pendentes', '-pendentes',
+                'urgentes', '-urgentes',
+                # Campos de relacionamento
+                'grupoAcao__nome', '-grupoAcao__nome'
+            ]
+            
+            if order_by in annotate_fields:
+                queryset = queryset.order_by(order_by)
+            else:
+                # Valida se o campo é válido para ordenação
+                valid_order_fields = ['id', 'nome']
+                if order_by.startswith('-'):
+                    field_name = order_by[1:]
+                    if field_name in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        # Fallback para ordenação padrão
+                        queryset = queryset.order_by('id')
+                else:
+                    if order_by in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by('id')
+        else:
+            queryset = queryset.order_by('id')
+            
+        # Paginação    
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class FaseProcessoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar Fases de Processo.
+    
+    Endpoint: /api/fasesProcesso/
+    
+    Parâmetros GET:
+    - field: Campo para filtrar (valores permitidos: 'nome')
+    - value: Valor para buscar no campo especificado (busca case-insensitive)
+    - order_by: Campo para ordenação (valores permitidos: 'total_processos', '-total_processos', 
+      'arquivados', '-arquivados', 'concluidos', '-concluidos', 'pendentes', '-pendentes', 
+      'urgentes', '-urgentes', 'id', '-id', 'nome', '-nome')
+    
+    Campos annotados disponíveis:
+    - total_processos: Número total de processos associados
+    - arquivados: Processos com status 'arquivado'
+    - concluidos: Processos marcados como concluídos
+    - pendentes: Processos não concluídos e com status 'ativo'
+    - urgentes: Processos prioritários não concluídos e com status 'ativo'
+    
+    Métodos HTTP permitidos: GET, POST, PUT, PATCH, DELETE
+    Autenticação: Requer usuário autenticado
+    Paginação: Padrão (StandardResultsSetPagination)
+    """
+    """
+    Faz uma pesquisa e retorna uma lista de processos de acordo com os parâmetros fornecidos.
+    
+    
+    """
+    queryset = FaseProcesso.objects.all()
+    serializer_class = FaseProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination  # Use o nome correto aqui
+    
+    def get_queryset(self):
+        """
+        Annota o queryset com as contagens de processos.
+        """
+        queryset = FaseProcesso.objects.annotate(
+            total_processos=Count(
+                'processo',
+                distinct=True,
+            ),
+            arquivados=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__status='arquivado')
+            ),
+            concluidos=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=True)
+            ),
+            pendentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            ),
+            urgentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__prioritario=True) & 
+                       Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            )
+        )
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        # Campos permitidos para busca
+        allowed_fields = ['nome']
+        
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por campo e valor
+        if field and value:
+            if field not in allowed_fields:
+                raise ValidationError({
+                    "error": f"O campo '{field}' não é permitido para busca."
+                })
+            
+            # Filtro por nome
+            queryset = queryset.filter(**{f"{field}__icontains": value})
+        
+        # Ordenação
+        if order_by:
+            # Permite ordenar pelos campos annotados
+            annotate_fields = [
+                'total_processos', '-total_processos',
+                'arquivados', '-arquivados',
+                'concluidos', '-concluidos',
+                'pendentes', '-pendentes',
+                'urgentes', '-urgentes'
+            ]
+            
+            if order_by in annotate_fields:
+                queryset = queryset.order_by(order_by)
+            else:
+                # Valida se o campo é válido para ordenação
+                valid_order_fields = ['id', 'nome']
+                if order_by.startswith('-'):
+                    field_name = order_by[1:]
+                    if field_name in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by('id')
+                else:
+                    if order_by in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by('id')
+        else:
+            queryset = queryset.order_by('id')
+            
+        # Paginação    
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+class EtapaProcessoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar Etapas de Processo.
+    
+    Endpoint: /api/etapasProcesso/
+    
+    Parâmetros GET:
+    - field: Campo para filtrar (valores permitidos: 'nome', 'faseProcesso')
+    - value: Valor para buscar no campo especificado (busca case-insensitive)
+    - order_by: Campo para ordenação (valores permitidos: 'total_processos', '-total_processos', 
+      'arquivados', '-arquivados', 'concluidos', '-concluidos', 'pendentes', '-pendentes', 
+      'urgentes', '-urgentes', 'id', '-id', 'nome', '-nome', 'faseProcesso__nome', '-faseProcesso__nome')
+    
+    Campos annotados disponíveis:
+    - total_processos: Número total de processos associados
+    - arquivados: Processos com status 'arquivado'
+    - concluidos: Processos marcados como concluídos
+    - pendentes: Processos não concluídos e com status 'ativo'
+    - urgentes: Processos prioritários não concluídos e com status 'ativo'
+    
+    Métodos HTTP permitidos: GET, POST, PUT, PATCH, DELETE
+    Autenticação: Requer usuário autenticado
+    Paginação: Padrão (StandardResultsSetPagination)
+    """
+    queryset = EtapaProcesso.objects.all()
+    serializer_class = EtapaProcessoSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination  # Use o nome correto aqui
+    
+    def get_queryset(self):
+        """
+        Annota o queryset com as contagens de processos.
+        """
+        queryset = EtapaProcesso.objects.annotate(
+            total_processos=Count(
+                'processo',
+                distinct=True,
+            ),
+            arquivados=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__status='arquivado')
+            ),
+            concluidos=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=True)
+            ),
+            pendentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            ),
+            urgentes=Count(
+                'processo',
+                distinct=True,
+                filter=Q(processo__prioritario=True) & 
+                       Q(processo__concluido=False) & 
+                       Q(processo__status='ativo')
+            )
+        ).select_related('faseProcesso')  # Otimiza consultas relacionadas
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        # Parâmetros de filtro
+        field = request.query_params.get('field')
+        value = request.query_params.get('value')
+        order_by = request.query_params.get('order_by')
+        
+        # Campos permitidos para busca
+        allowed_fields = ['nome', 'faseProcesso']
+        
+        # Queryset base com annotate
+        queryset = self.get_queryset()
+        
+        # Filtro por campo e valor
+        if field and value:
+            if field not in allowed_fields:
+                raise ValidationError({
+                    "error": f"O campo '{field}' não é permitido para busca."
+                })
+            
+            # Filtro especial para faseProcesso
+            if field == 'faseProcesso':
+                queryset = queryset.filter(faseProcesso__nome__icontains=value)
+            else:
+                queryset = queryset.filter(**{f"{field}__icontains": value})
+        
+        # Ordenação
+        if order_by:
+            # Permite ordenar pelos campos annotados
+            annotate_fields = [
+                'total_processos', '-total_processos',
+                'arquivados', '-arquivados',
+                'concluidos', '-concluidos',
+                'pendentes', '-pendentes',
+                'urgentes', '-urgentes',
+                # Campos de relacionamento
+                'faseProcesso__nome', '-faseProcesso__nome'
+            ]
+            
+            if order_by in annotate_fields:
+                queryset = queryset.order_by(order_by)
+            else:
+                # Valida se o campo é válido para ordenação
+                valid_order_fields = ['id', 'nome']
+                if order_by.startswith('-'):
+                    field_name = order_by[1:]
+                    if field_name in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by('id')
+                else:
+                    if order_by in valid_order_fields:
+                        queryset = queryset.order_by(order_by)
+                    else:
+                        queryset = queryset.order_by('id')
+        else:
+            queryset = queryset.order_by('id')
+            
+        # Paginação    
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Sem paginação
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class TipoTarefaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar Tipos de Tarefa.
+    
+    Endpoint: /api/tipoTarefa/
+    
+    Campos annotados disponíveis:
+    - total_tarefas: Número total de tarefas associadas (não deletadas)
+    - concluidas: Tarefas marcadas como concluídas e não deletadas
+    - pendentes: Tarefas não concluídas e não deletadas
+    - pendentes_em_aberto: Tarefas não concluídas com status 'em aberto'
+    - pendentes_atrasadas: Tarefas não concluídas com status 'atrasada'
+    - pendentes_perto_prazo: Tarefas não concluídas com status 'perto do prazo'
+    - pendentes_urgentes: Tarefas não concluídas marcadas como urgentes
+    
+    Métodos HTTP permitidos: GET, POST, PUT, PATCH, DELETE
+    Autenticação: Requer usuário autenticado
+    Paginação: Padrão (StandardResultsSetPagination)
+    """
+    queryset = TipoTarefa.objects.all()
+    serializer_class = TipoTarefaSerializer
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     
-    def get(self, request):
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
-        
-        
-        if not field or not value:
-            raise ValidationError({
-                "error": "Os campos 'field' e 'value' são obrigatórios."
-            })
-        if field not in self.alowed_field:
-            raise ValidationError({
-                "error": f"O campo '{field}' não é permitido para busca."
-            })
-        if not order_by:
-            if field == 'advogadoCriadorId':
-                queryset = Processo.objects.filter(
-                    advogadoCriadorId__nome__icontains=value
-                ).order_by('id')
-            elif field == 'clienteNome':
-                queryset = Processo.objects.filter(
-                    clienteId__nome__icontains=value
-                ).order_by('id')
-            else:
-                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
-            
-        else:
-            if field == 'advogadoCriadorId':
-                queryset = Processo.objects.filter(
-                    advogadoCriadorId__nome__icontains=value
-                ).order_by(order_by)
-            elif field == 'clienteId':
-                queryset = Processo.objects.filter(
-                    clienteId__nome__icontains=value
-                ).order_by(order_by)
-            else:
-                queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
-        return Response(ProcessoSerializer(queryset, many=True).data)   
+    def get_queryset(self):
+        # Annota o queryset base com todas as estatísticas necessárias
+        queryset = TipoTarefa.objects.annotate(
+            total_tarefas=Count(
+                'tarefas',
+                filter=Q(tarefas__deletada=False)
+            ),
+            # Contagens gerais
+            concluidas=Count(
+                'tarefas',
+                filter=Q(tarefas__concluida=True, tarefas__deletada=False)
+            ),
+            pendentes=Count(
+                'tarefas',
+                filter=Q(tarefas__concluida=False, tarefas__deletada=False)
+            ),
+            # Detalhes das pendentes (tarefas não concluídas)
+            pendentes_em_aberto=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='em aberto',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_atrasadas=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='atrasada',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_perto_prazo=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__status='perto do prazo',
+                    tarefas__deletada=False
+                )
+            ),
+            pendentes_urgentes=Count(
+                'tarefas',
+                filter=Q(
+                    tarefas__concluida=False,
+                    tarefas__urgente=True,
+                    tarefas__deletada=False
+                )
+            ),
+        )
+        return queryset  
 
-
-class BuscarTarefaCampoView(APIView):
-    permission_classes = [IsAuthenticated]
-    alowed_field = ['advogadoCriadorId','advogadoResponsavelId','processoOrigemId']
-
-    def get(self, request):
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
-        if field not in self.alowed_field:
-            raise ValidationError({
-                "error": f"O campo '{field}' não é permitido para busca."
-            })
-        if not field or not value:
-            raise ValidationError({
-                "error": "Os campos 'field' e 'value' são obrigatórios."
-            })
-        if not order_by:
-            if field == 'advogadoCriadorId':
-                queryset = Tarefas.objects.filter(
-                    advogadoCriadorId__nome__icontains=value
-                ).order_by('id')
-            elif field == 'advogadoResponsavelId':
-                queryset = Tarefas.objects.filter(
-                    advogadoResponsavelId__nome__icontains=value
-                ).order_by('id')
-            elif field == 'processoOrigemId':
-                queryset = Tarefas.objects.filter(
-                    processoOrigemId__titulo__icontains=value
-                ).order_by('id')
-        else:
-            if field == 'advogadoCriadorId':
-                queryset = Tarefas.objects.filter(
-                    advogadoCriadorId__nome__icontains=value
-                ).order_by(order_by)
-            elif field == 'advogadoResponsavelId':
-                queryset = Tarefas.objects.filter(
-                    advogadoResponsavelId__nome__icontains=value
-                ).order_by(order_by)
-            elif field == 'processoOrigemId':
-                queryset = Tarefas.objects.filter(
-                    processoOrigemId__titulo__icontains=value
-                ).order_by(order_by)
-        return Response(TarefasSerializer(queryset, many=True).data)
-            
-            
 class BuscaSelect(APIView):
+    """
+    View para busca específica em campos pesquisáveis.
+    
+    Endpoint: /api/select/
+    
+    Parâmetros GET:
+    - tipo (obrigatório): Tipo de busca (valores permitidos: 'grupo_acao', 'tipo_acao', 'fase_processo', 'etapa_processo')
+    - search (opcional): Termo para busca case-insensitive no nome
+    - id (opcional): ID para filtro adicional
+      - Para 'tipo_acao': filtra por grupoAcao_id
+      - Para 'etapa_processo': filtra por faseProcesso_id
+    - limit (opcional): Limite de resultados (padrão: 50, máximo: 200)
+    
+    Resposta JSON:
+    - tipo: tipo da busca realizada
+    - resultados: array com {id, nome} ou {id, nome, grupo_id, grupo_nome} ou {id, nome, fase_id, fase_nome}
+    - total: número de resultados encontrados
+    - filtro_aplicado: objeto com ID aplicado (quando aplicável)
+    
+    Métodos HTTP permitidos: GET
+    Autenticação: Requer usuário autenticado
+    """
     permission_classes = [IsAuthenticated]
     def get(self, request):
         tipo = request.query_params.get('tipo')
@@ -152,7 +679,15 @@ class BuscaSelect(APIView):
 
     
     def busca_grupo_acao(self, search, limit):
-        """Busca em GrupoAcao"""
+        """
+        Método auxiliar para busca em GrupoAcao.
+        
+        Parâmetros:
+        - search: Termo para busca case-insensitive no nome (opcional)
+        - limit: Número máximo de resultados
+        
+        Retorna: JsonResponse com tipo, resultados e total
+        """
         queryset = GrupoAcao.objects.all()
         
         # Filtro de busca - se search vazio, retorna todos
@@ -172,7 +707,16 @@ class BuscaSelect(APIView):
         })
     
     def busca_tipo_acao(self, search, id_param, limit):
-        """Busca em TipoAcao, com filtro opcional por grupo usando o id_param"""
+        """
+        Método auxiliar para busca em TipoAcao com filtro opcional por grupo.
+        
+        Parâmetros:
+        - search: Termo para busca case-insensitive no nome (opcional)
+        - id_param: ID do grupoAcao para filtro (opcional)
+        - limit: Número máximo de resultados
+        
+        Retorna: JsonResponse com tipo, resultados, total e filtro_aplicado
+        """
         queryset = TipoAcao.objects.all()
         
         # Filtro por grupo (opcional)
@@ -221,7 +765,15 @@ class BuscaSelect(APIView):
         })
     
     def busca_fase_processo(self, search, limit):
-        """Busca em FaseProcesso"""
+        """
+        Método auxiliar para busca em FaseProcesso.
+        
+        Parâmetros:
+        - search: Termo para busca case-insensitive no nome (opcional)
+        - limit: Número máximo de resultados
+        
+        Retorna: JsonResponse com tipo, resultados e total
+        """
         queryset = FaseProcesso.objects.all()
         
         # Filtro de busca - se search vazio, retorna todos
@@ -240,7 +792,16 @@ class BuscaSelect(APIView):
             'total': len(resultados)
         })
     def busca_etapa_processo(self, search, id_param, limit):
-        """Busca em EtapaProcesso, com filtro opcional por fase usando o id_param"""
+        """
+        Método auxiliar para busca em EtapaProcesso com filtro opcional por fase.
+        
+        Parâmetros:
+        - search: Termo para busca case-insensitive no nome (opcional)
+        - id_param: ID da faseProcesso para filtro (opcional)
+        - limit: Número máximo de resultados
+        
+        Retorna: JsonResponse com tipo, resultados, total e filtro_aplicado
+        """
         queryset = EtapaProcesso.objects.all()
         
         # Filtro por fase (opcional)
@@ -288,46 +849,35 @@ class BuscaSelect(APIView):
             }
         })
 
-
-
-class BuscaParceirosSelectView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(request):
-        try:
-            # Busca todos os parceiros, selecionando apenas id e nome
-            parceiros = Parceiros.objects.all().values('id', 'nome')
-            # Converte o QuerySet para lista
-            parceiros_list = list(parceiros)
-            return JsonResponse(parceiros_list, safe=False)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    
-
-class BuscarRepresentantesPorClienteView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request, cliente_id):
-        cliente = Cliente.objects.filter(id=cliente_id).first()
-        
-        if not cliente:
-            return JsonResponse({
-                "error": "Cliente nao encontrado"
-            }, status=404)
-        
-        representante = Representante.objects.filter(cliente=cliente).first()
-        
-        if not representante:
-            return JsonResponse({
-                "error": "Nenhum representante encontrado"
-            }, status=404)
-        
-        serializer = RepresentanteSerializer(representante)
-        return JsonResponse(serializer.data, safe=False)
-    
-    
 class BuscaGenericSelectView(APIView):
+    """
+    View para busca genérica em múltiplos modelos.
+    
+    Endpoint: /api/search-select/
+    
+    Parâmetros GET:
+    - model (obrigatório): Modelo para busca (valores permitidos: 'processo', 'tipo_tarefa', 
+      'advogado', 'advogado-online', 'cliente', 'parceiro', 'representante', 'escritorio', 
+      'grupo_acao', 'fase_processo')
+    - search (opcional): Termo para busca case-insensitive
+    - limit (opcional): Limite de resultados (padrão: sem limite, máximo: 500)
+    - include_nome (opcional): Incluir campo 'nome' adicional (valores: 'true'/'false')
+    - include_field (opcional): Incluir campo específico adicional
+    
+    Resposta JSON (array de objetos):
+    - value: ID do objeto
+    - label: Nome/texto de exibição
+    - Campos extras baseados nos parâmetros include_* e tipo de modelo
+    
+    Filtros automáticos aplicados:
+    - Models com campo 'deletada': filtra deletada=False
+    - Models com campo 'ativo': filtra ativo=True
+    - Models com campo 'is_active': filtra is_active=True
+    - 'advogado-online': adicionalmente filtra is_online=True
+    
+    Métodos HTTP permitidos: GET
+    Autenticação: Requer usuário autenticado
+    """
     permission_classes = [IsAuthenticated]
     
     def get(request):
@@ -445,493 +995,196 @@ class BuscaGenericSelectView(APIView):
             return JsonResponse({
                 "error": f"Erro interno: {str(e)}"
             }, status=500)
-        
-        
-class GrupoAcaoViewSet(viewsets.ModelViewSet):
-    queryset = GrupoAcao.objects.all()
-    serializer_class = GrupoAcaoSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination  # Adiciona a paginação
-    
-    def get_queryset(self):
-        """
-        Annota o queryset com as contagens de processos.
-        """
-        queryset = GrupoAcao.objects.annotate(
-            total_processos=Count(
-                'processo',
-                distinct=True,
-            ),
-            arquivados=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__status='arquivado')
-            ),
-            concluidos=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=True)
-            ),
-            pendentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            ),
-            urgentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__prioritario=True) & 
-                       Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            )
-        )
-        return queryset
-    
-    def list(self, request, *args, **kwargs):
-        # Parâmetros de filtro e ordenação
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
 
-        # Campos permitidos para busca
-        allowed_fields = ['nome']
-        
-        # Queryset base com annotate
-        queryset = self.get_queryset()
-        
-        # Filtro por campo e valor
-        if field and value:
-            if field not in allowed_fields:
-                return Response({"error": "Campo de filtro inválido."}, status=400)
-
-            # Filtro por nome
-            if field == 'nome':
-                queryset = queryset.filter(nome__icontains=value)
-        
-        # Ordenação
-        if order_by:
-            # Permite ordenar pelos campos annotados também
-            annotate_fields = [
-                'total_processos', '-total_processos',
-                'arquivados', '-arquivados',
-                'concluidos', '-concluidos',
-                'pendentes', '-pendentes',
-                'urgentes', '-urgentes'
-            ]
-            
-            if order_by in annotate_fields:
-                queryset = queryset.order_by(order_by)
-            else:
-                # Ordenação por campos do modelo
-                if order_by.startswith('-'):
-                    field_name = order_by[1:]
-                    if field_name in ['nome']:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by(order_by)
-                else:
-                    if order_by in ['nome']:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by(order_by)
-        else:
-            queryset = queryset.order_by('nome')  # Ordenação padrão por nome
-        
-        # Paginação
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Sem paginação
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    
-class TipoAcaoViewSet(viewsets.ModelViewSet):
-    queryset = TipoAcao.objects.all()
-    serializer_class = TipoAcaoSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination  # Adiciona paginação
-    
-    def get_queryset(self):
-        """
-        Annota o queryset com as contagens de processos.
-        """
-        queryset = TipoAcao.objects.annotate(
-            total_processos=Count(
-                'processo',
-                distinct=True,
-            ),
-            arquivados=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__status='arquivado')
-            ),
-            concluidos=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=True)
-            ),
-            pendentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            ),
-            urgentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__prioritario=True) & 
-                       Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            )
-        ).select_related('grupoAcao')  # Otimiza consultas relacionadas
-        return queryset
-    
-    def list(self, request, *args, **kwargs):
-        # Parâmetros de filtro
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
-        
-        # Campos permitidos para busca
-        allowed_fields = ['nome', 'grupoAcao']
-        
-        # Queryset base com annotate
-        queryset = self.get_queryset()
-        
-        # Filtro por campo e valor
-        if field and value:
-            if field not in allowed_fields:
-                raise ValidationError({
-                    "error": f"O campo '{field}' não é permitido para busca."
-                })
-            
-            # Filtro especial para grupoAcao
-            if field == 'grupoAcao':
-                queryset = queryset.filter(grupoAcao__nome__icontains=value)
-            else:
-                queryset = queryset.filter(**{f"{field}__icontains": value})
-        
-        # Ordenação
-        if order_by:
-            # Permite ordenar pelos campos annotados
-            annotate_fields = [
-                'total_processos', '-total_processos',
-                'arquivados', '-arquivados',
-                'concluidos', '-concluidos',
-                'pendentes', '-pendentes',
-                'urgentes', '-urgentes',
-                # Campos de relacionamento
-                'grupoAcao__nome', '-grupoAcao__nome'
-            ]
-            
-            if order_by in annotate_fields:
-                queryset = queryset.order_by(order_by)
-            else:
-                # Valida se o campo é válido para ordenação
-                valid_order_fields = ['id', 'nome']
-                if order_by.startswith('-'):
-                    field_name = order_by[1:]
-                    if field_name in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        # Fallback para ordenação padrão
-                        queryset = queryset.order_by('id')
-                else:
-                    if order_by in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by('id')
-        else:
-            queryset = queryset.order_by('id')
-            
-        # Paginação    
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Sem paginação
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-
-class FaseProcessoViewSet(viewsets.ModelViewSet):
+class BuscarRepresentantesPorClienteView(APIView):
     """
-    Faz uma pesquisa e retorna uma lista de processos de acordo com os parâmetros fornecidos.
+    View para buscar representantes de um cliente específico.
     
+    Endpoint: /api/cliente/<int:cliente_id>/representante/
     
+    Parâmetros URL:
+    - cliente_id (obrigatório): ID do cliente para buscar representantes
+    
+    Resposta JSON:
+    - Em caso de sucesso: dados completos do representante
+    - Em caso de erro: {"error": "mensagem"} com status apropriado
+    
+    Códigos de status:
+    - 200: Representante encontrado
+    - 404: Cliente não encontrado ou nenhum representante associado
+    
+    Métodos HTTP permitidos: GET
+    Autenticação: Requer usuário autenticado
     """
-    queryset = FaseProcesso.objects.all()
-    serializer_class = FaseProcessoSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination  # Use o nome correto aqui
     
-    def get_queryset(self):
-        """
-        Annota o queryset com as contagens de processos.
-        """
-        queryset = FaseProcesso.objects.annotate(
-            total_processos=Count(
-                'processo',
-                distinct=True,
-            ),
-            arquivados=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__status='arquivado')
-            ),
-            concluidos=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=True)
-            ),
-            pendentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            ),
-            urgentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__prioritario=True) & 
-                       Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            )
-        )
-        return queryset
+    def get(self, request, cliente_id):
+        cliente = Cliente.objects.filter(id=cliente_id).first()
+        
+        if not cliente:
+            return JsonResponse({
+                "error": "Cliente nao encontrado"
+            }, status=404)
+        
+        representante = Representante.objects.filter(cliente=cliente).first()
+        
+        if not representante:
+            return JsonResponse({
+                "error": "Nenhum representante encontrado"
+            }, status=404)
+        
+        serializer = RepresentanteSerializer(representante)
+        return JsonResponse(serializer.data, safe=False)
+
+class ProcessosClientesNomeView(APIView):
+    """
+    View unificada para busca de processos e clientes por nome, CPF ou número do processo.
     
-    def list(self, request, *args, **kwargs):
-        # Parâmetros de filtro
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
+    Endpoint: /api/processosClientesNome/<str:cliente_nome>/
+    
+    Parâmetros URL:
+    - cliente_nome (obrigatório): Termo de busca (pode ser nome do cliente, CPF ou número do processo)
+    
+    Lógica de busca:
+    1. Validação: termo obrigatório, máximo 100 caracteres
+    2. Extração de números: remove pontuação para busca de CPF
+    3. Busca por nome: se conter letras, busca em Cliente.nome
+    4. Busca por CPF: compara números sem pontuação
+    5. Busca por processo: busca em Processo.numeroProcesso
+    6. Combina resultados: processos dos clientes encontrados + processos por número
+    
+    Resposta JSON:
+    {
+      "clientes": [{"id": int, "nome": str, "cpf": str}], // limite 10
+      "processos": [{
+        "id": int,
+        "numero": str,
+        "titulo": str,
+        "status": str,
+        "nomeCliente": str,
+        "cpfCliente": str,
+        "clienteId": int
+      }], // limite 10
+      "total_clientes": int,
+      "total_processos": int
+    }
+    
+    Códigos de status:
+    - 200: Busca realizada com sucesso
+    - 400: Termo de busca obrigatório ou muito longo
+    - 404: Nenhum resultado encontrado
+    
+    Métodos HTTP permitidos: GET
+    Autenticação: Requer usuário autenticado
+    
+    Método auxiliar:
+    - limpar_cpf(cpf): Remove pontuação do CPF para comparação numérica
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = Processo.objects.all()
+    serializer_class = ProcessoSerializer
+    
+    def get(self,request,cliente_nome):
+        if not cliente_nome:
+            return JsonResponse({'error': 'Termo de busca obrigatório.'}, status=400)
         
-        # Campos permitidos para busca
-        allowed_fields = ['nome']
+        search_term = cliente_nome.strip()
         
-        # Queryset base com annotate
-        queryset = self.get_queryset()
+        # Limita o tamanho da busca
+        if len(search_term) > 100:
+            return JsonResponse({'error': 'Termo de busca muito longo.'}, status=400)
         
-        # Filtro por campo e valor
-        if field and value:
-            if field not in allowed_fields:
-                raise ValidationError({
-                    "error": f"O campo '{field}' não é permitido para busca."
+        # Prepara termo numérico (sem pontuação)
+        numeros_only = re.sub(r'[^\d]', '', search_term)
+        
+        # Busca clientes
+        clientes_encontrados = []
+        processos_encontrados = []
+        
+        # Busca por nome (se tiver letras)
+        if any(c.isalpha() for c in search_term):
+            clientes_nome = Cliente.objects.filter(nome__icontains=search_term)
+            clientes_encontrados.append(clientes_nome)
+        
+        # Busca por CPF (compara sem pontuação)
+        if numeros_only:
+            # Busca em todos os clientes e filtra por CPF sem pontuação
+            todos_clientes = Cliente.objects.all()
+            clientes_cpf = []
+            
+            for cliente in todos_clientes:
+                if cliente.cpf and numeros_only in self.limpar_cpf(cliente.cpf):
+                    clientes_cpf.append(cliente.id)
+            
+            if clientes_cpf:
+                clientes_encontrados.append(Cliente.objects.filter(id__in=clientes_cpf))
+        
+        # Combina resultados de clientes
+        clientes = Cliente.objects.none()
+        for qs in clientes_encontrados:
+            clientes = clientes | qs
+        clientes = clientes.distinct()
+        
+        # Busca processos por número
+        if search_term:
+            processos_numero = Processo.objects.filter(numeroProcesso__icontains=search_term)
+            processos_encontrados.append(processos_numero)
+        
+        # Busca processos dos clientes encontrados
+        if clientes.exists():
+            processos_clientes = Processo.objects.filter(clienteId__in=clientes)
+            processos_encontrados.append(processos_clientes)
+        
+        # Combina processos
+        processos = Processo.objects.none()
+        for qs in processos_encontrados:
+            processos = processos | qs
+        processos = processos.distinct()
+        
+        # Se não encontrou nada
+        if not clientes.exists() and not processos.exists():
+            return JsonResponse({
+                'error': 'Nenhum resultado encontrado.',
+                'clientes': [],
+                'processos': [],
+                'total_clientes': 0,
+                'total_processos': 0
+            }, status=404)
+        
+        # Prepara resposta
+        response_data = {
+            'clientes': [],
+            'processos': [],
+            'total_clientes': clientes.count(),
+            'total_processos': processos.count()
+        }
+        
+        # Adiciona clientes (limite 10)
+        if clientes.exists():
+            for cliente in clientes[:10]:
+                response_data['clientes'].append({
+                    'id': cliente.id,
+                    'nome': cliente.nome,
+                    'cpf': cliente.cpf  # Mantém o formato original
                 })
-            
-            # Filtro por nome
-            queryset = queryset.filter(**{f"{field}__icontains": value})
         
-        # Ordenação
-        if order_by:
-            # Permite ordenar pelos campos annotados
-            annotate_fields = [
-                'total_processos', '-total_processos',
-                'arquivados', '-arquivados',
-                'concluidos', '-concluidos',
-                'pendentes', '-pendentes',
-                'urgentes', '-urgentes'
-            ]
-            
-            if order_by in annotate_fields:
-                queryset = queryset.order_by(order_by)
-            else:
-                # Valida se o campo é válido para ordenação
-                valid_order_fields = ['id', 'nome']
-                if order_by.startswith('-'):
-                    field_name = order_by[1:]
-                    if field_name in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by('id')
-                else:
-                    if order_by in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by('id')
-        else:
-            queryset = queryset.order_by('id')
-            
-        # Paginação    
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Sem paginação
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    
-
-class EtapaProcessoViewSet(viewsets.ModelViewSet):
-    queryset = EtapaProcesso.objects.all()
-    serializer_class = EtapaProcessoSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination  # Use o nome correto aqui
-    
-    def get_queryset(self):
-        """
-        Annota o queryset com as contagens de processos.
-        """
-        queryset = EtapaProcesso.objects.annotate(
-            total_processos=Count(
-                'processo',
-                distinct=True,
-            ),
-            arquivados=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__status='arquivado')
-            ),
-            concluidos=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=True)
-            ),
-            pendentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            ),
-            urgentes=Count(
-                'processo',
-                distinct=True,
-                filter=Q(processo__prioritario=True) & 
-                       Q(processo__concluido=False) & 
-                       Q(processo__status='ativo')
-            )
-        ).select_related('faseProcesso')  # Otimiza consultas relacionadas
-        return queryset
-    
-    def list(self, request, *args, **kwargs):
-        # Parâmetros de filtro
-        field = request.query_params.get('field')
-        value = request.query_params.get('value')
-        order_by = request.query_params.get('order_by')
-        
-        # Campos permitidos para busca
-        allowed_fields = ['nome', 'faseProcesso']
-        
-        # Queryset base com annotate
-        queryset = self.get_queryset()
-        
-        # Filtro por campo e valor
-        if field and value:
-            if field not in allowed_fields:
-                raise ValidationError({
-                    "error": f"O campo '{field}' não é permitido para busca."
+        # Adiciona processos (limite 10)
+        if processos.exists():
+            for processo in processos.select_related('clienteId')[:10]:
+                cliente = processo.clienteId
+                response_data['processos'].append({
+                    'id': processo.id,
+                    'numero': processo.numeroProcesso,
+                    'titulo': processo.titulo,
+                    'status': processo.status,
+                    'nomeCliente': cliente.nome if cliente else None,
+                    'cpfCliente': cliente.cpf if cliente else None,
+                    'clienteId': cliente.id if cliente else None
                 })
-            
-            # Filtro especial para faseProcesso
-            if field == 'faseProcesso':
-                queryset = queryset.filter(faseProcesso__nome__icontains=value)
-            else:
-                queryset = queryset.filter(**{f"{field}__icontains": value})
         
-        # Ordenação
-        if order_by:
-            # Permite ordenar pelos campos annotados
-            annotate_fields = [
-                'total_processos', '-total_processos',
-                'arquivados', '-arquivados',
-                'concluidos', '-concluidos',
-                'pendentes', '-pendentes',
-                'urgentes', '-urgentes',
-                # Campos de relacionamento
-                'faseProcesso__nome', '-faseProcesso__nome'
-            ]
-            
-            if order_by in annotate_fields:
-                queryset = queryset.order_by(order_by)
-            else:
-                # Valida se o campo é válido para ordenação
-                valid_order_fields = ['id', 'nome']
-                if order_by.startswith('-'):
-                    field_name = order_by[1:]
-                    if field_name in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by('id')
-                else:
-                    if order_by in valid_order_fields:
-                        queryset = queryset.order_by(order_by)
-                    else:
-                        queryset = queryset.order_by('id')
-        else:
-            queryset = queryset.order_by('id')
-            
-        # Paginação    
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Sem paginação
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        return JsonResponse(response_data)
     
-
-class DocumentosViewSet(viewsets.ModelViewSet):
-    queryset = Documentos.objects.all()
-    serializer_class = DocumentosSerializer
-    permission_classes = [IsAuthenticated]    
-    
-    
-class ArquivoModelViewSet(viewsets.ModelViewSet):
-    queryset = ArquivoModel.objects.all()
-    serializer_class = ArquivoModelSerializer
-    permission_classes = [IsAuthenticated]
-
-    
-class ArquivoTarefaViewSet(viewsets.ModelViewSet):
-    queryset = ArquivoTarefa.objects.all()
-    serializer_class = ArquivoTarefaSerializer
-    permission_classes = [IsAuthenticated]
-    
-    
-class ArquivoModelClienteIdView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, cliente):
-        try:
-            arquivos = ArquivoModel.objects.filter(cliente_id=cliente)
-        except ArquivoModel.DoesNotExist:
-            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
-        serializer = ArquivoModelSerializer(arquivos, many=True)
-        return Response(serializer.data)  
-
-class ArquivoTarefaIdView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, tarefa):
-        try:
-            arquivos = ArquivoTarefa.objects.filter(tarefa_id=tarefa)
-        except ArquivoTarefa.DoesNotExist:
-            return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
-        serializer = ArquivoTarefaSerializer(arquivos, many=True)
-        return Response(serializer.data) 
-    
-
-class EtapasPorFase(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(request,fase_id):
-        etapas = EtapaProcesso.objects.filter(faseProcesso=fase_id)
-        serializer = EtapaProcessoSerializer(etapas, many=True)
-        jsonFile = serializer.data
-        return JsonResponse(jsonFile, safe=False)
-
-
-class TipoPorGrupo(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(request,grupo_id):
-        tipo = TipoAcao.objects.filter(grupoAcao=grupo_id)
-        serializer = TipoAcaoSerializer(tipo, many=True)
-        jsonFile = serializer.data
-        return JsonResponse(jsonFile, safe=False)
+    def limpar_cpf(self,cpf):
+        if not cpf:
+            return ''
+        return re.sub(r'[^\d]', '', str(cpf))
