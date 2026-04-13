@@ -1,6 +1,6 @@
 from ..models import Advogado
 from ..serializers import AdvogadoResumidoSerializer, AdvogadoSerializer
-from .services.services_advogado import AdvogadoService
+from .services.advogado_services import AdvogadoService
 from rest_framework import viewsets, status
 from django.conf import settings
 from rest_framework.response import Response
@@ -14,10 +14,10 @@ from django.http import JsonResponse
 import jwt
 
 
-class AdvogadoRegisterView(APIView):  # ToDo Refactor: transformar em service
+class AdvogadoRegisterView(APIView):
     permission_classes = [IsAuthenticated]
     queryset = Advogado.objects.all()
-    AdvogadoService = AdvogadoService(repository=None)  # Você pode passar um repositório real aqui se necessário
+
     def post(self, request):
         chave_recebida = request.headers.get(getattr(settings,'API_HEADER_NAME','X-Api-Key'))
         resultado = AdvogadoService.validate_chave_login(chave_recebida)

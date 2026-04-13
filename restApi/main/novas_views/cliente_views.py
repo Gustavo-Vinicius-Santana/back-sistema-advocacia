@@ -6,10 +6,10 @@ from main.serializers import ClienteSerializer, ClienteEsperaSerializer
 from rest_framework.pagination import PageNumberPagination
 from main.models import Cliente, ClienteEspera
 from rest_framework.views import APIView
-
+import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
-from .services.clientes.cliente_services import ClienteService
+from .services import ClienteService
 
 class standardResultsSetPagination(PageNumberPagination):
     page_size = 10
