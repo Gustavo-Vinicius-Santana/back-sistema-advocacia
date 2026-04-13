@@ -1,5 +1,6 @@
 from ..models import Advogado,Tarefas,Processo
 from ..serializers import AdvogadoResumidoSerializer, AdvogadoSerializer
+from .services import AdvogadoService
 from rest_framework import viewsets,status
 from django.db.models import Count, Q
 from django.conf import settings
@@ -17,12 +18,12 @@ import jwt
 class AdvogadoRegisterView(APIView):
     permission_classes = [IsAuthenticated]
     queryset = Advogado.objects.all()
+    AdvogadoService = AdvogadoService(repository=None)  # Você pode passar um repositório real aqui se necessário
     def post(self, request):
         chave_recebida = request.headers.get(getattr(settings,'API_HEADER_NAME','X-Api-Key'))
-        chave_esperada = str(getattr(settings,'API_SECRET_KEY',"chavesecreta123"))
-        if chave_recebida != chave_esperada:
-            return JsonResponse({'error': 'Chave de API inválida.'}, status=403)
-        
+        resultado = AdvogadoService.validate_chave_login(chave_recebida)
+        if not resultado:
+            return JsonResponse({'error': 'Chave de API inválida.'}, status=403)
         data = json.loads(request.body)
         nome = data.get('nome')
         telefone = data.get('telefone')
@@ -51,7 +52,7 @@ class AdvogadoViewSet(viewsets.ModelViewSet):
     serializer_class = AdvogadoSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination  # Adiciona a paginação aqui
-    
+    # ToDo Refactor: transformar em service
     def get_queryset(self):
         """
         Annota o queryset base com as contagens de tarefas.
