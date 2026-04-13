@@ -1,1 +1,1 @@
-from services_advogado import *
+from .advogado_services import *
