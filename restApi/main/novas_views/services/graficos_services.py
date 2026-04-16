@@ -16,7 +16,7 @@ class GraficoService:
        
             
     """
-    def obter_grafico_processos_tipo(self):
+    def obter_grafico_processos_tipo(self)->list:
         processosRuins = Processo.objects.filter(classificacao = 'ruim').count()
         processosRegulares = Processo.objects.filter(classificacao = 'regular').count()
         processosBons = Processo.objects.filter(classificacao = 'bom').count()
@@ -59,7 +59,7 @@ class GraficoService:
 
         return json_file
     
-    def obter_grafico_processos_fase(self):
+    def obter_grafico_processos_fase(self)->list:
         fases = (
             FaseProcesso.objects
             .annotate(quantidade=Count('processo'))
@@ -77,7 +77,7 @@ class GraficoService:
 
         return json_data
     
-    def obter_grafico_processos_protocolar_peticionar(self):
+    def obter_grafico_processos_protocolar_peticionar(self)->list:
         processosProtocolar = Processo.objects.filter(tipoAcao__nome__iexact='protocolar').count()
         processosPeticionar = Processo.objects.filter(tipoAcao__nome__iexact='peticionar').count()
 
@@ -102,7 +102,7 @@ class GraficoService:
         ]
         return jsonFile
     
-    def obter_grafico_clientes_contratos(self):
+    def obter_grafico_clientes_contratos(self)->list:
         clientesComcontrato = Cliente.objects.filter(contrato = True).count()
         clientesSemContrato = Cliente.objects.filter(contrato = False).count()
 
@@ -116,7 +116,7 @@ class GraficoService:
 
         return json_file
     
-    def obter_grafico_clientes_parceiros(self):
+    def obter_grafico_clientes_parceiros(self)->list:
         parceiros = Cliente.objects.values('parceiro__nome').annotate(quantidade=Count('id')).order_by('parceiro__nome')
 
         json_file = [
@@ -129,7 +129,7 @@ class GraficoService:
 
         return json_file
     
-    def obter_grafico_tarefas_status(self):
+    def obter_grafico_tarefas_status(self)->list:
         tarefasConcluidas = Tarefas.objects.filter(concluida = True).count()
         tarefasEmAberto = Tarefas.objects.filter(concluida = False).count()
         jsonFile = [
@@ -144,7 +144,7 @@ class GraficoService:
         ]
         return jsonFile
     
-    def obter_grafico_tarefas_advogado(self):
+    def obter_grafico_tarefas_advogado(self)->list:
         advogados = Advogado.objects.all()
         jsonFile = []
         for advogado in advogados:
