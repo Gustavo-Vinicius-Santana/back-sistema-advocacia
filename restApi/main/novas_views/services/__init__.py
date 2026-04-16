@@ -1,3 +1,6 @@
 from .advogado_services import *
 from .cliente_services import *
 from .processos_services import *
+from .graficos_services import *
+from .parceiros_services import *
+from .tarefas_services import *
