@@ -1,12 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from ..serializers import EscritoriosSerializer
-from ..models import Escritorios
+from .services import EscritorioService
 from .pagination_views import StandardResultsSetPagination
 
 
 class EscritoriosViewSet(viewsets.ModelViewSet):
-    queryset = Escritorios.objects.all()
+    service = EscritorioService()
+    queryset = service.obter_queryset
     serializer_class = EscritoriosSerializer
     permission_classes = [IsAuthenticated]
     

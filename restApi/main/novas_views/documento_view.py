@@ -1,18 +1,27 @@
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from ..serializers import DocumentosSerializer, ArquivoModelSerializer, ArquivoTarefaSerializer
+from .services import DocumentoService
 
 
 class DocumentosViewSet(viewsets.ModelViewSet):
-    queryset = Documentos.objects.all()
+    service = DocumentoService()
+    queryset = service.obter_queryset_documento()
     serializer_class = DocumentosSerializer
     permission_classes = [IsAuthenticated]    
     
 class ArquivoModelViewSet(viewsets.ModelViewSet):
-    queryset = ArquivoModel.objects.all()
+    service = DocumentoService()
+    queryset = service.obter_queryset_arquivos()
     serializer_class = ArquivoModelSerializer
     permission_classes = [IsAuthenticated]
 
 
 class ArquivoTarefaViewSet(viewsets.ModelViewSet):
-    queryset = ArquivoTarefa.objects.all()
+    service = DocumentoService()
+    queryset = service.obter_queryset_arquivos_tarefa()
     serializer_class = ArquivoTarefaSerializer
     permission_classes = [IsAuthenticated]
   
@@ -20,10 +29,12 @@ class ArquivoTarefaViewSet(viewsets.ModelViewSet):
 class ArquivoModelClienteIdView(APIView):
     permission_classes = [IsAuthenticated]
 
+
     def get(self, request, cliente):
+        service = DocumentoService()
         try:
-            arquivos = ArquivoModel.objects.filter(cliente_id=cliente)
-        except ArquivoModel.DoesNotExist:
+            arquivos = service.obter_arquivos_por_cliente(cliente_id=cliente)
+        except None:
             return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
         serializer = ArquivoModelSerializer(arquivos, many=True)
         return Response(serializer.data)  
@@ -32,9 +43,10 @@ class ArquivoTarefaIdView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, tarefa):
+        service = DocumentoService()
         try:
-            arquivos = ArquivoTarefa.objects.filter(tarefa_id=tarefa)
-        except ArquivoTarefa.DoesNotExist:
+            arquivos = service.obter_arquivo_tarefa_por_id(arquivo_id=tarefa)
+        except None: # o service ou retorna um objeto ou None.
             return Response({'error': 'ArquivoModel nao encontrado.'}, status=404)
         serializer = ArquivoTarefaSerializer(arquivos, many=True)
         return Response(serializer.data) 

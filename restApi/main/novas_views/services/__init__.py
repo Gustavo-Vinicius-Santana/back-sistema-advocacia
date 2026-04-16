@@ -4,3 +4,5 @@ from .processos_services import *
 from .graficos_services import *
 from .parceiros_services import *
 from .tarefas_services import *
+from .escritorio_services import *
+from .documento_services import *
