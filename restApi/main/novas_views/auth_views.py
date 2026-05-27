@@ -31,8 +31,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
    
 class ResetPasswordView(APIView):
     permission_classes = [IsAuthenticated]
-    
-    def validate_reset_token(token):
+    def validate_reset_token(token: str)->bool:
         try:
             refresh = RefreshToken(token)
             if refresh.payload.get("purpose") != "reset_password":

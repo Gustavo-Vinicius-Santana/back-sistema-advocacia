@@ -13,12 +13,13 @@ from django.db.models import Q, Count
 from django.http import JsonResponse
 import json
 from .services import TarefasServices
+from .permissions import *
 
 class TarefasViewSet(viewsets.ModelViewSet):
     service  = TarefasServices()
     queryset = service.obter_queryset()
     serializer_class = TarefasSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
@@ -125,7 +126,7 @@ class TipoTarefaViewSet(viewsets.ModelViewSet):
     service = TarefasServices()
     queryset = service.obter_tipos_tarefas()
     serializer_class = TipoTarefaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
@@ -185,7 +186,7 @@ class TipoTarefaViewSet(viewsets.ModelViewSet):
 
 
 class TarefasProcessosView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     
     def get(self, request, processo_id):
         if not processo_id:
@@ -202,7 +203,7 @@ class TarefasProcessosView(APIView):
     
     
 class TarefasDeletadasView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     service = TarefasServices()
     queryset = service.obter_tarefas_deletadas()
     
@@ -216,7 +217,7 @@ class TarefasDeletadasView(APIView):
     
 class TarefasDeletadasEspecificasView(APIView):
     service = TarefasServices()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     queryset = service.obter_tarefas_deletadas()
     
     def get(self, request, tarefa_id):
@@ -263,7 +264,7 @@ class TarefasDeletadasEspecificasView(APIView):
 
 class HistoricoTarefasView(APIView):
     service = TarefasServices()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     queryset = service.obter_tarefas_deletadas()
     
     def get(self, request):
@@ -275,7 +276,7 @@ class HistoricoTarefasView(APIView):
 
 class HistoricoTarefasEspecificosView(APIView):
     service = TarefasServices()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     queryset = service.obter_tarefas_deletadas()
     
     def get(self, request, tarefa_id):
@@ -304,7 +305,7 @@ class HistoricoTarefasEspecificosView(APIView):
     
     
 class TarefasConcluidasEspecificasView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     
     
     def get(request,tarefa_id:int):

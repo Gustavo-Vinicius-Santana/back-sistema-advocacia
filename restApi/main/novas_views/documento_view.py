@@ -4,30 +4,31 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from ..serializers import DocumentosSerializer, ArquivoModelSerializer, ArquivoTarefaSerializer
 from .services import DocumentoService
+from .permissions import OnlyAdminDELETE
 
 
 class DocumentosViewSet(viewsets.ModelViewSet):
     service = DocumentoService()
     queryset = service.obter_queryset_documento()
     serializer_class = DocumentosSerializer
-    permission_classes = [IsAuthenticated]    
+    permission_classes = [OnlyAdminDELETE]    
     
 class ArquivoModelViewSet(viewsets.ModelViewSet):
     service = DocumentoService()
     queryset = service.obter_queryset_arquivos()
     serializer_class = ArquivoModelSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
 
 class ArquivoTarefaViewSet(viewsets.ModelViewSet):
     service = DocumentoService()
     queryset = service.obter_queryset_arquivos_tarefa()
     serializer_class = ArquivoTarefaSerializer
-    permission_classes = [IsAuthenticated]
-  
+    permission_classes = [OnlyAdminDELETE]
+
 
 class ArquivoModelClienteIdView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
 
     def get(self, request, cliente):
@@ -40,7 +41,7 @@ class ArquivoModelClienteIdView(APIView):
         return Response(serializer.data)  
 
 class ArquivoTarefaIdView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
     def get(self, request, tarefa):
         service = DocumentoService()

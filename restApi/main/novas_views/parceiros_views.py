@@ -1,9 +1,9 @@
 from ..serializers import ParceirosSerializer
 from rest_framework.response import Response
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
 from .pagination_views import StandardResultsSetPagination
 from .services import ParceirosService
+from .permissions import *
 
 
 #Novas views chamando os Services para obter os dados e retornar o JsonResponse para os gráficos do frontend.
@@ -11,7 +11,7 @@ class ParceirosViewSet(viewsets.ModelViewSet):
     service = ParceirosService()
     queryset = service.obter_queryset()    
     serializer_class = ParceirosSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):

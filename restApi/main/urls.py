@@ -5,22 +5,22 @@ from . import views
 from .novas_views import *
 
 router = DefaultRouter()
-router.register(r'clientes', views.ClienteViewSet)
-router.register(r'advogados', views.AdvogadoViewSet)
-router.register(r'processos', views.ProcessoViewSet)
-router.register(r'gruposAcao', data_field_views.GrupoAcaoViewSet, basename='gruposAcao')
-router.register(r'tiposAcao', data_field_views.TipoAcaoViewSet, basename='tiposAcao')
-router.register(r'fasesProcesso', data_field_views.FaseProcessoViewSet, basename='fasesProcesso')
-router.register(r'etapasProcesso', data_field_views.EtapaProcessoViewSet, basename='etapasProcesso')
-router.register(r'tarefas', views.TarefasViewSet)
-router.register(r'tipoTarefa', data_field_views.TipoTarefaViewSet, basename='tipoTarefa')
-router.register(r'clientesEspera', views.ClienteEsperaViewSet,basename='clientesEspera')
-router.register(r'documentos', views.DocumentosViewSet,basename='documentos')
-router.register(r'representantes', views.RepresentanteViewSet,basename='representantes')
-router.register(r'parceiros', views.ParceirosViewSet,basename='parceiros')
-router.register(r'escritorios', views.EscritoriosViewSet,basename='escritorios')
-router.register(r'arquivoModel', views.ArquivoModelViewSet, basename='arquivoModel')
-router.register(r'arquivoTarefa', views.ArquivoTarefaViewSet, basename='arquivoTarefa')
+router.register(r'clientes', cliente_views.ClienteViewSet) # V
+router.register(r'advogados', advogados_views.AdvogadoViewSet)# V
+router.register(r'processos', processos_views.ProcessoViewSet) # V
+router.register(r'gruposAcao', data_field_views.GrupoAcaoViewSet, basename='gruposAcao') #V
+router.register(r'tiposAcao', data_field_views.TipoAcaoViewSet, basename='tiposAcao')#V 
+router.register(r'fasesProcesso', data_field_views.FaseProcessoViewSet, basename='fasesProcesso')#V
+router.register(r'etapasProcesso', data_field_views.EtapaProcessoViewSet, basename='etapasProcesso')#V
+router.register(r'tarefas', tarefas_views.TarefasViewSet)#V
+router.register(r'tipoTarefa', data_field_views.TipoTarefaViewSet, basename='tipoTarefa')#V
+router.register(r'clientesEspera', cliente_views.ClienteEsperaViewSet,basename='clientesEspera')
+router.register(r'documentos', documento_view.DocumentosViewSet,basename='documentos')#V
+router.register(r'representantes', views.RepresentanteViewSet,basename='representantes') #Faltando nova arquivo de views
+router.register(r'parceiros', parceiros_views.ParceirosViewSet,basename='parceiros')#V
+router.register(r'escritorios', escritorios_views.EscritoriosViewSet,basename='escritorios')#V
+router.register(r'arquivoModel', documento_view.ArquivoModelViewSet, basename='arquivoModel')#V
+router.register(r'arquivoTarefa', documento_view.ArquivoTarefaViewSet, basename='arquivoTarefa')#V
 
 urlpatterns = [
     path('', include(router.urls)),

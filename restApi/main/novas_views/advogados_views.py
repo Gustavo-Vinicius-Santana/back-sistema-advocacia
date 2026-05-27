@@ -10,77 +10,13 @@ from rest_framework.views import APIView
 from jwt.exceptions import InvalidTokenError
 import json
 from django.http import JsonResponse
+from .permissions import *
 
 import jwt
 
 
-class AdvogadoRegisterView(APIView):
-    permission_classes = [IsAuthenticated]
-    queryset = Advogado.objects.all()
-
-    def post(self, request):
-        chave_recebida = request.headers.get(getattr(settings,'API_HEADER_NAME','X-Api-Key'))
-        resultado = AdvogadoService.validate_chave_login(chave_recebida)
-        if not resultado:
-            return JsonResponse({'error': 'Chave de API inválida.'}, status=403)
-        data = json.loads(request.body)
-        nome = data.get('nome')
-        telefone = data.get('telefone')
-        email = data.get('email')
-        password = data.get('password')
-        oab = data.get('oab')
-        foto = data.get('foto')  # ✅ novo campo
-
-        if not nome or not email:
-            return JsonResponse({"error": "Nome e email são obrigatórios."}, status=400)
-
-        advogado = Advogado.objects.create(
-            nome=nome, 
-            telefone=telefone,
-            email=email,
-            oab=oab,
-            foto=foto  # ✅ salva a URL da foto
-        )
-        advogado.set_password(password)
-        advogado.save()
-        return JsonResponse({'message': 'advogado registrado com sucesso'}, status=201)
-
-class AdvogadoViewSet(viewsets.ModelViewSet):
-    queryset = Advogado.objects.all()
-    serializer_class = AdvogadoSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination
-    
-    def get_queryset(self):
-        """Retorna queryset com anotações de tarefas via service"""
-        service = AdvogadoService()
-        return service.get_queryset_anotado()
-    
-    def list(self, request, *args, **kwargs):
-        """Lista advogados com filtro e ordenação delegados ao service"""
-        service = AdvogadoService()
-        
-        try:
-            # Delegar lógica de filtro e ordenação ao service
-            queryset = service.filtrar_e_ordenar(
-                field=request.query_params.get('field'),
-                value=request.query_params.get('value'),
-                order_by=request.query_params.get('order_by')
-            )
-        except ValueError as e:
-            return Response({"error": str(e)}, status=400)
-        
-        # Aplicar paginação
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
 class AdvogadosOnlineView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     queryset = Advogado.objects.all()
 
     def get(self, request):
@@ -102,7 +38,7 @@ class AdvogadoLogoutView(APIView):
 
 
 class AdvogadosResumidoView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
     def get(self, request):
         advogados = Advogado.objects.all()
@@ -111,7 +47,7 @@ class AdvogadosResumidoView(APIView):
 
 
 class AdvogadosDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
     def get(self, request, *args, **kwargs):
         service = AdvogadoService()
@@ -146,7 +82,14 @@ class AdvogadoUserInfoView(APIView):
             advogado_id = payload.get('user_id')
             advogado = Advogado.objects.get(id=advogado_id)
             serializer = AdvogadoSerializer(advogado)
-            return Response(serializer.data)
+            serializer_formatado = dict(serializer.data)
+            if advogado.is_staff:
+                serializer_formatado['role'] = 'staff'
+            elif advogado.is_superuser:
+                serializer_formatado['role'] = 'admin'
+            else:
+                serializer_formatado['role'] = 'advogado'
+            return Response(serializer_formatado)
         except IndexError:
             return Response({'error': 'Formato do token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
         except InvalidTokenError:
@@ -327,7 +270,7 @@ class AdvogadosDashboardView(APIView):
 
 class AdvogadoUserInfoView(APIView):
     """Retorna informações do usuário autenticado"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     
     def get(self, request, *args, **kwargs):
         token = request.headers.get('Authorization')

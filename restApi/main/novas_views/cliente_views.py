@@ -10,6 +10,7 @@ import datetime
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from .services import ClienteService
+from .permissions import *
 
 class standardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -19,7 +20,7 @@ class standardResultsSetPagination(PageNumberPagination):
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = standardResultsSetPagination
     
     def get_queryset(self):
@@ -73,11 +74,11 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
 
 
 class BuscarClienteCamposView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     alowed_field = ['nome','cpf','telefone','inss','parceiro']
     pagination_class = standardResultsSetPagination
     def get(self, request):
@@ -96,8 +97,8 @@ class BuscarClienteCamposView(APIView):
 
 
 class ClientesSemContratoView(APIView):
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [OnlyAdminDELETE]
+
     def get(self, request):
         service = ClienteService()
         
@@ -125,8 +126,8 @@ class ClientesSemContratoView(APIView):
     
 
 class ClienteEsperaAdvView(APIView):
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [OnlyAdminDELETE]
+
     def get(self, request, advogado_id):
         service = ClienteService()
         

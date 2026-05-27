@@ -13,6 +13,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 import json
 from .services.processos_services import ProcessoService
+from .permissions import *
 
 class standardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -27,7 +28,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     """
     queryset = Processo.objects.all()
     serializer_class = ProcessoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = standardResultsSetPagination
 
     def __init__(self):
@@ -86,7 +87,7 @@ class FaseProcessoViewSet(viewsets.ModelViewSet):
     """
     queryset = FaseProcesso.objects.all()
     serializer_class = FaseProcessoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = standardResultsSetPagination  # Use o nome correto aqui
     
     def get_queryset(self):
@@ -192,7 +193,7 @@ class FaseProcessoViewSet(viewsets.ModelViewSet):
 class EtapaProcessoViewSet(viewsets.ModelViewSet):
     queryset = EtapaProcesso.objects.all()
     serializer_class = EtapaProcessoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     pagination_class = standardResultsSetPagination  # Use o nome correto aqui
     
     def get_queryset(self):
@@ -361,7 +362,7 @@ class ProcessosClientesView(APIView):
     
     
 class ProcessosArquivados(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     queryset = Processo.objects.all()
     serializr_class = ProcessoSerializer
     
@@ -424,7 +425,7 @@ class ProcessosArquivados(APIView):
 class ProcessosAdvogado(APIView):
     queryset = Processo.objects.all()
     serializer_class = ProcessoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [OnlyAdminDELETE]
     
     def get(request,advogado_id):
         if not advogado_id:
