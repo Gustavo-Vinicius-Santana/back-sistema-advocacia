@@ -12,7 +12,7 @@ class TarefasServices:
     def obter_queryset(self)-> Tarefas:
         return Tarefas.objects.all()
     
-    def custom_queryset()->Tarefas:
+    def custom_queryset(self)->Tarefas:
         hoje = timezone.localdate()
         data_limite = hoje + timedelta(days=3)
         limite = datetime.combine(data_limite, time.max)  # até 23:59:59
