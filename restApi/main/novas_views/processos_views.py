@@ -31,8 +31,8 @@ class ProcessoViewSet(viewsets.ModelViewSet):
     permission_classes = [OnlyAdminDELETE]
     pagination_class = standardResultsSetPagination
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.service = ProcessoService()
 
     def get_queryset(self):
