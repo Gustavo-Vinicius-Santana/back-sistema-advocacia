@@ -1,4 +1,4 @@
-from django.db.models import Count, Q, Case, When, Value, IntegerField
+from django.db.models import Count, Q, Case, QuerySet, When, Value, IntegerField
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from datetime import datetime

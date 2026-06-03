@@ -50,7 +50,8 @@ class ClienteViewSet(viewsets.ModelViewSet):
                 data_nasc = item.get('dataNascimento')
                 if data_nasc:
                     if isinstance(data_nasc, str):
-                        data_nasc = datetime.strptime(data_nasc, '%Y-%m-%d').date()
+                        #está dessa forma pois importei o módulo datetime
+                        data_nasc = datetime.datetime.strptime(data_nasc, '%Y-%m-%d').date()
                     item['dias_para_65'] = service.calcular_dias_para_65_anos(data_nasc)
                 else:
                     item['dias_para_65'] = None
