@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 from django.core.exceptions import FieldError
 from django.db.models import Count, Q
+from rest_framework.exceptions import ValidationError
 
 
 class TarefasServices:
@@ -44,8 +45,9 @@ class TarefasServices:
             'processoOrigemId__clienteId'  # NOVO: Inclui cliente através do processo
         ).all()
         
-    def list_services(self, request)->Tarefas:
+    def list_services(self, request,queryset)->Tarefas:
         # Parâmetros de filtro e ordenação
+        
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
@@ -74,7 +76,7 @@ class TarefasServices:
         # Filtro por campo composto (FK) - somente se ambos field e value forem fornecidos
         if field and value:
             if field not in allowed_fields:
-                return Response({"error": "Campo de filtro inválido."}, status=400)
+                raise ValidationError("Campo de filtro inválido.")
             match field:
                 case 'advogadoCriadorId':
                     queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
@@ -260,15 +262,15 @@ class TarefasServices:
         return queryset
     
     
-    def criar_historico_tarefa(self, tarefa_id: int, data_Hora: str, advogado_nome: str, campos_mudados_formatados: str)-> bool:
-        historico = HistoricoTarefas.objects.create(
-            tarefaId=tarefa_id,
-            dataHora=data_Hora,
-            acao=f'{data_Hora} - {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
-        )
-        if historico.save():
+    def criar_historico_tarefa(self, tarefa_id: int, data_Hora: str, advogado_nome: str, campos_mudados_formatados: str) -> bool:
+        try:
+            HistoricoTarefas.objects.create(
+                tarefaId=tarefa_id,
+                dataHora=data_Hora,
+                acao=f'{data_Hora} - {advogado_nome} alterou o(s) campo(s): {campos_mudados_formatados}'
+            )
             return True
-        else:
+        except Exception:
             return False
         
         

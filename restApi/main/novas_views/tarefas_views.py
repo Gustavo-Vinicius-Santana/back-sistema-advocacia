@@ -32,7 +32,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
         
         service = TarefasServices()
         try:
-            queryset = service.list_services(request)
+            queryset = service.list_services(request,queryset)
 
         except FieldError as e:
             return Response({'error': str(e)}, status=400)
@@ -58,7 +58,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
             }
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
-        tiposLista = service.obter_tipos_tarefas 
+        tiposLista = service.obter_tipos_tarefas() 
         tipos = []
         for e in tiposLista:
             tipos.append(e.nome)
