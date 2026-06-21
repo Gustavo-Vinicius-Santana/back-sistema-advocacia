@@ -19,7 +19,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
     service  = TarefasServices()
     queryset = service.obter_queryset()
     serializer_class = TarefasSerializer
-    permission_classes = [OnlyAdminDELETE]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):

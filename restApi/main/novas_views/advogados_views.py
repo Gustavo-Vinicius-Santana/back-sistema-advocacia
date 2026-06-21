@@ -11,6 +11,7 @@ from jwt.exceptions import InvalidTokenError
 import json
 from django.http import JsonResponse
 from .permissions import *
+from rest_framework.exceptions import ValidationError
 
 import jwt
 
@@ -144,10 +145,7 @@ class AdvogadoRegisterView(APIView):
                 status=201
             )
         except ValueError as e:
-            return JsonResponse(
-                {"error": str(e)},
-                status=400
-            )
+            raise ValidationError(str(e))
 
 
 class AdvogadoViewSet(viewsets.ModelViewSet):

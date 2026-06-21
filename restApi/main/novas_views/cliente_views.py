@@ -75,7 +75,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class ClienteEsperaViewSet(viewsets.ModelViewSet):
     queryset = ClienteEspera.objects.all()
     serializer_class = ClienteEsperaSerializer
-    permission_classes = [OnlyAdminDELETE]
+    permission_classes = [IsAuthenticated]
 
 
 class BuscarClienteCamposView(APIView):
