@@ -14,6 +14,7 @@ from django.http import JsonResponse
 import json
 from .services import TarefasServices
 from .permissions import *
+import jwt
 
 class TarefasViewSet(viewsets.ModelViewSet):
     service  = TarefasServices()

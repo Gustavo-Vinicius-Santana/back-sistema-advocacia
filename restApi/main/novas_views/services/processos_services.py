@@ -14,7 +14,7 @@ class ProcessoService:
     ]
 
     ALLOWED_ORDER_FIELDS = [
-        'id', 'numeroProcesso', 'titulo', 'dataContrato', 'prioritario',
+        'id', 'numeroProcesso', 'titulo', 'dataContrato', 'prioritario','-prioritario',
         'clienteId__nome', '-clienteId__nome',
         'advogadoCriadorId__nome', '-advogadoCriadorId__nome',
         'fase', '-fase', 'fase__nome', '-fase__nome',
