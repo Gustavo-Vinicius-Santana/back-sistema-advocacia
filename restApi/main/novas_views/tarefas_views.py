@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ..serializers import TarefasSerializer,TipoTarefaSerializer,HistoricoTarefasSerializer
-from ..models import Tarefas,TipoTarefa,HistoricoTarefas
+from ..models import Tarefas,TipoTarefa,HistoricoTarefas, Advogado
 from .pagination_views import StandardResultsSetPagination
 from django.utils import timezone
 from datetime import datetime, timedelta, time
@@ -15,6 +15,7 @@ import json
 from .services import TarefasServices
 from .permissions import *
 import jwt
+from  django.conf import settings
 
 class TarefasViewSet(viewsets.ModelViewSet):
     service  = TarefasServices()
