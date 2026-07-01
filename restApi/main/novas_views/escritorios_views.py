@@ -7,9 +7,10 @@ from .permissions import OnlyAdminDELETE
 
 class EscritoriosViewSet(viewsets.ModelViewSet):
     service = EscritorioService()
-    queryset = service.obter_queryset
+
     serializer_class = EscritoriosSerializer
     permission_classes = [OnlyAdminDELETE]
-    
-    # Adicione este atributo - assumindo que standardResultsSetPagination já está definido
     pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        return self.service.obter_queryset()
