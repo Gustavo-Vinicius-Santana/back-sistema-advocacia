@@ -111,7 +111,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     if valor_depois == True:
                         instance.deletadaPor = advogado.nome
                         instance.save()
-                if flagPrazoFinal == False and campo == 'prazoFinal':
+                if flagPrazoFinal and campo == 'prazoFinal':
                     instance.prazoFinal = prazoAntigo
                     print('prazo final nao pode ser anterior a data de hoje')
                     instance.save()
