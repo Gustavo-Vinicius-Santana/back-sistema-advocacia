@@ -95,11 +95,14 @@ class TarefasViewSet(viewsets.ModelViewSet):
         campos_mudados = []
         #verificação do prazo final
         prazoFinal_str = dados_depois.get('prazoFinal')
+       
         if prazoFinal_str < timezone.localdate().strftime('%Y-%m-%d'):
-            response = {
-                'error': 'A data de prazoFinal nao pode ser anterior a data de hoje.'
-            }
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+           flagPrazoFinal = False #flagPrazo para saber se o prazo final é anterior a data de hoje
+        else:
+           flagPrazoFinal = True 
+        
+        prazoAntigo = dados_antes.get('prazoFinal')
+            
         for campo, valor_antes in dados_antes.items():
             valor_depois = dados_depois.get(campo)
             if valor_depois != valor_antes:
@@ -108,6 +111,10 @@ class TarefasViewSet(viewsets.ModelViewSet):
                     if valor_depois == True:
                         instance.deletadaPor = advogado.nome
                         instance.save()
+                if flagPrazoFinal == False and campo == 'prazoFinal':
+                    instance.prazoFinal = prazoAntigo
+                    print('prazo final nao pode ser anterior a data de hoje')
+                    instance.save()
                 
         tarefa_id = instance
         data_Hora = datetime.now().strftime('%Y-%m-%d %H:%M')
