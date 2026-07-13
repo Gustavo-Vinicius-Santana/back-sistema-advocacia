@@ -138,6 +138,7 @@ class AdvogadoRegisterView(APIView):
                 telefone=data.get('telefone'),
                 oab=data.get('oab'),
                 foto=data.get('foto'),
+                is_staff=data.get('is_staff', False),
                 password=data.get('password')
             )
             return JsonResponse(
