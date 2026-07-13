@@ -118,7 +118,7 @@ class AdvogadoService:
             raise ValueError(f"Advogado com ID {advogado_id} não encontrado")
     
     def registrar_advogado(self, nome: str, email: str, telefone: str = None, 
-                          oab: str = None, foto: str = None, password: str = None) -> Advogado:
+                          oab: str = None, foto: str = None, is_staff: bool = False,password: str = None) -> Advogado:
         """
         Cria um novo advogado com validações básicas.
         Encapsula a lógica de registro.
@@ -134,7 +134,8 @@ class AdvogadoService:
             telefone=telefone,
             email=email,
             oab=oab,
-            foto=foto
+            foto=foto,
+            is_staff=is_staff
         )
         
         if password:
