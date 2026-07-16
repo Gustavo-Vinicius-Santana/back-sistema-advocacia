@@ -267,7 +267,7 @@ class Command(BaseCommand):
         for _ in range(5):
             Documentos.objects.create(
                 nome=fake.word(),
-                tipo="PDF",
+                tipo=random.choice(["cliente", "processo"]),
                 documento="Conteúdo de exemplo"
             )
 

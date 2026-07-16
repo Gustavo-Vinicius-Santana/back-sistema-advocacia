@@ -1,19 +1,30 @@
-asgiref==3.8.1
-certifi==2025.1.31
-charset-normalizer==3.4.1
+# Django e Extensões
 Django==5.1.7
-django-cors-headers==4.7.0
 djangorestframework==3.15.2
 djangorestframework_simplejwt==5.5.0
+django-cors-headers==4.7.0
+
+# Banco de Dados
+psycopg2-binary==2.9.9
+
+# Utilitários
+python-dateutil==2.9.0.post0
 Faker==38.0.0
-idna==3.10
 pillow==11.3.0
 PyJWT==2.9.0
-python-dateutil==2.9.0.post0
+
+# Dependências de requests (geralmente são instaladas automaticamente)
 requests==2.32.3
-six==1.17.0
-sqlparse==0.5.3
-typing_extensions==4.12.2
-tzdata==2025.2
 urllib3==2.3.0
-psycopg2-binary==2.9.9
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+
+# Dependências do Django
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.2
+
+# Utilitários adicionais
+six==1.17.0
+typing_extensions==4.12.2
