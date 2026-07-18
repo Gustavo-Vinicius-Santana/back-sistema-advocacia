@@ -30,8 +30,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     
    
 class ResetPasswordView(APIView):
-    permission_classes = [IsAuthenticated]
-    def validate_reset_token(token: str)->bool:
+    def validate_reset_token(self, token: str)->bool:
         try:
             refresh = RefreshToken(token)
             if refresh.payload.get("purpose") != "reset_password":
@@ -60,8 +59,6 @@ class ResetPasswordView(APIView):
         
     
 class EmailRequestSenha(APIView):
-    permission_classes = [IsAuthenticated]
-    
     def post(self,request):
         data = json.loads(request.body)
         email = data.get('email')
@@ -78,9 +75,7 @@ class EmailRequestSenha(APIView):
         
     
 class ValidateResetTokenView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(request,token):
+    def get(self, request, token):
         try:
             refresh = RefreshToken(token)
             if refresh.payload.get("purpose") != "reset_password":
