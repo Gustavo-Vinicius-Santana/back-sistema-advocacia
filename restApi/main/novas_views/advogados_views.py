@@ -12,6 +12,8 @@ import json
 from django.http import JsonResponse
 from .permissions import *
 from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 import jwt
 
@@ -24,37 +26,6 @@ class AdvogadosOnlineView(APIView):
         advogados_online = Advogado.objects.filter(is_online=True)
         serializer = AdvogadoSerializer(advogados_online, many=True)
         return Response(serializer.data)
-
-
-class AdvogadoLogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        service = AdvogadoService()
-        try:
-            service.atualizar_status_online(request.user.id, is_online=False)
-            
-            # Create response and clear HTTP-only cookies
-            response = Response({"detail": "Logout realizado com sucesso."})
-            
-            # Clear access token cookie
-            response.delete_cookie(
-                'access_token',
-                path='/',
-                domain=None
-            )
-            
-            # Clear refresh token cookie
-            response.delete_cookie(
-                'refresh_token',
-                path='/',
-                domain=None
-            )
-            
-            return response
-        except ValueError as e:
-            return Response({"error": str(e)}, status=404)
-
 
 class AdvogadosResumidoView(APIView):
     permission_classes = [OnlyAdminDELETE]
@@ -221,24 +192,30 @@ class AdvogadoLogoutView(APIView):
     Endpoint de logout.
     Marca o advogado como offline via service.
     """
-    permission_classes = [IsAuthenticated]
+    # Logout must also clear stale cookies after the access token expires.
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
-        service = AdvogadoService()
-        try:
-            service.atualizar_status_online(
-                request.user.id,
-                is_online=False
-            )
-            response = Response({"detail": "Logout realizado com sucesso."})
-            response.delete_cookie('access_token', path='/')
-            response.delete_cookie('refresh_token', path='/')
-            return response
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        refresh_token = request.COOKIES.get('refresh_token')
+
+        if refresh_token:
+            try:
+                refresh = RefreshToken(refresh_token)
+                AdvogadoService().atualizar_status_online(
+                    refresh['user_id'],
+                    is_online=False,
+                )
+                refresh.blacklist()
+            except (TokenError, ValueError, KeyError):
+                # A token may already be expired or revoked. Cookie removal
+                # still needs to succeed in this case.
+                pass
+
+        response = Response({"detail": "Logout realizado com sucesso."})
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+        return response
 
 
 class AdvogadosResumidoView(APIView):
