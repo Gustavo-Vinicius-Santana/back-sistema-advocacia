@@ -126,6 +126,9 @@ class AdvogadoService:
         if not nome or not email:
             raise ValueError("Nome e email são obrigatórios")
         
+        if password and len(password) < 12:
+            raise ValueError("A senha deve ter no mínimo 12 caracteres")
+        
         if Advogado.objects.filter(email=email).exists():
             raise ValueError("Email já está registrado")
         

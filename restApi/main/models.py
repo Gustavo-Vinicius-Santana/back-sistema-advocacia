@@ -108,6 +108,8 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
             """
             if not email:
                 raise ValueError("O email é obrigatório")
+            if password and len(password) < 12:
+                raise ValueError("A senha deve ter no mínimo 12 caracteres")
             email = self.normalize_email(email)
             advogado = self.model(email=email, **extra_fields)
             advogado.set_password(password)
@@ -118,6 +120,8 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
             """
             Cria e retorna um superadvogado com privilégios de admin.
             """
+            if password and len(password) < 12:
+                raise ValueError("A senha deve ter no mínimo 12 caracteres")
             extra_fields.setdefault('is_staff', True)
             extra_fields.setdefault('is_superuser', True)
             return self.create_user(email, password, **extra_fields)

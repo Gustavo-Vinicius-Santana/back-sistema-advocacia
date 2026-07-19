@@ -94,6 +94,9 @@ class ResetPasswordView(APIView):
     def post(self, request,token):
         data = json.loads(request.body)
         password = data.get('password')
+        
+        if len(password) < 12:
+            return JsonResponse({'error': 'A senha deve ter no mínimo 12 caracteres'}, status=400)
         if not self.validate_reset_token(token):
             return JsonResponse({'error': 'Token inválido ou expirado.'}, status=401)
         try:
