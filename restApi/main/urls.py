@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from .novas_views import *
 
@@ -24,9 +23,10 @@ router.register(r'arquivoTarefa', documento_view.ArquivoTarefaViewSet, basename=
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('csrf/', auth_views.CsrfTokenView.as_view(), name='csrf_token'),
     path('token/', auth_views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
     path('token/resetValidate/<str:token>', auth_views.ValidateResetTokenView.as_view(), name='validate_reset_token_endpoint'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/refresh/', auth_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('registrarAdvogado/', advogados_views.AdvogadoRegisterView.as_view(), name='registrarAdv'),
     path('emailRequestSenha/', auth_views.EmailRequestSenha.as_view(), name='emailRequestSenha'),
     path('resetPassword/<path:token>', auth_views.ResetPasswordView.as_view(), name='resetPassword'),
