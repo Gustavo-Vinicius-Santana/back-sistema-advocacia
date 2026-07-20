@@ -23,7 +23,6 @@ router.register(r'arquivoTarefa', documento_view.ArquivoTarefaViewSet, basename=
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('csrf/', auth_views.CsrfTokenView.as_view(), name='csrf_token'),
     path('token/', auth_views.CustomTokenObtainPairView.as_view(), name='custom_token_obtain_pair'),
     path('token/resetValidate/<str:token>', auth_views.ValidateResetTokenView.as_view(), name='validate_reset_token_endpoint'),
     path('token/refresh/', auth_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
@@ -44,7 +43,7 @@ urlpatterns = [
     path('graficos/processos/tipo/', graficos_views.GraficosProcessosTipoView.as_view(), name='graficoProcessosTipo'),
     path('graficos/processos/grupo/', graficos_views.GraficosProcessosGrupoView.as_view(), name='graficoProcessosGrupo'),
     path('graficos/processos/status/', graficos_views.GraficoProcessosStatusView.as_view(), name='graficoProcessosStatus'),
-    path('graficos/processos/fase/', graficos_views.GraficosProcessosFaseView.as_view(),name='graficosProcessosFase'),
+    path('graficos/processos/fase/', graficos_views.GraficosProcessosFaseView.as_view(),name='graficoProcessosFase'),
     path('graficos/processos/peticionarProtocolar/', graficos_views.GraficosProcessosProtocolarPeticionarView.as_view(), name='graficoProcessosPeticionarProtocolar'),
     path('graficos/clientes/contrato/', graficos_views.GraficosClientesContratosView.as_view(), name='graficoClientesContrato'),
     path('graficos/clientes/parceiro/', graficos_views.GraficoClientesParceirosView.as_view(), name='graficoClientesParceiro'),
@@ -56,4 +55,5 @@ urlpatterns = [
     path('select/', views.generic_select_view, name='generic-select'), # deve estar no dominio data field,
 
     path('search-select/', views.searchSelect, name='search-select'), # deve estar no dominio data field,
+    path('csrf/', auth_views.CsrfTokenView.as_view(), name='csrf_token'),
 ]

@@ -10,7 +10,7 @@ import json
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from ..models import Advogado
 from ..emailSender import EmailSender
 from django.conf import settings
@@ -193,11 +193,16 @@ class CustomTokenRefreshView(APIView):
             return JsonResponse({'error': 'Refresh token inválido ou expirado'}, status=401)
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class CsrfTokenView(APIView):
-    """Issues a CSRF token for requests authenticated with cookies."""
+    """
+    Endpoint para inicializar a proteção CSRF.
+    Garante que o cookie CSRF seja enviado ao cliente.
+    Não requer autenticação.
+    """
 
     authentication_classes = []
     permission_classes = []
 
     def get(self, request):
-        return JsonResponse({'csrfToken': get_token(request)})
+        return JsonResponse({'detail': 'CSRF cookie set'})
