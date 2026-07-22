@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,Permissi
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
-    telefone = models.CharField(max_length=20, unique=True)
+    telefone = models.CharField(max_length=20)
     dataNascimento = models.DateField(blank=True, null=True)
     profissao = models.CharField(max_length=255,blank=True)
     inss = models.CharField(max_length=255,blank=True)
@@ -40,17 +40,21 @@ class Cliente(models.Model):
 class Representante(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20,unique=True)
-    cpf = models.CharField(max_length=14,unique=True,blank = True)
-    cep = models.CharField(max_length=10,blank = True)
+    email = models.EmailField(default='nenhum@provedor.com',unique=True, blank=True)
+    profissao = models.CharField(max_length=255,blank=True)
+    cpf = models.CharField(max_length=14,unique=True)
+    cep = models.CharField(max_length=10)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
-    rua = models.CharField(max_length=255,blank = True)
-    numero = models.IntegerField(default=0,blank = True)
-    cidade = models.CharField(max_length=255,blank = True)
-    estado = models.CharField(max_length=255,blank = True)
-    bairro = models.CharField(max_length=255,blank = True)
+    rua = models.CharField(max_length=255)
+    numero = models.IntegerField(default=0)
+    cidade = models.CharField(max_length=255)
+    estado = models.CharField(max_length=255)
+    bairro = models.CharField(max_length=255)
     complemento = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
 
+    def __str__(self):
+        return f'Representante {self.nome}'
 
 class ClienteEspera(models.Model):
     nome = models.CharField(max_length=255)
@@ -60,7 +64,8 @@ class ClienteEspera(models.Model):
     cpf = models.CharField(max_length=14, blank=True,unique=True)
     dataNascimento = models.DateField(blank=True,default='2000-01-01')
 
-#Comentando para teste de commit 
+    def __str__(self):
+        return f'Cliente {self.nome}'
 
 
 class Parceiros(models.Model):
@@ -75,6 +80,9 @@ class Parceiros(models.Model):
     bairro = models.CharField(max_length=255,blank=True)
     observacoes = models.TextField(blank=True)
     
+    def __str__(self):
+        return f'Parceiro {self.nome}'
+    
     
 class Escritorios(models.Model):
     nome = models.CharField(max_length=255)
@@ -85,6 +93,9 @@ class Escritorios(models.Model):
     cep = models.CharField(max_length=20,blank=True)
     cidade = models.CharField(max_length=255,blank=True)
     bairro = models.CharField(max_length=255,blank=True)
+    
+    def __str__(self):
+        return f'Escritorio {self.nome}'
 
 
 class Advogado(AbstractBaseUser, PermissionsMixin):
@@ -157,8 +168,7 @@ class Advogado(AbstractBaseUser, PermissionsMixin):
 
 
 class Processo(models.Model):
-    titulo = models.CharField(max_length=255,blank=True)
-    numeroProcesso = models.CharField(max_length=50, unique=True)
+    numeroProcesso = models.CharField(max_length=50, unique=True, blank=True, default='Número não cadastrado.')
     STATUS_CHOICES = [('ativo','Ativo'),('arquivado','Arquivado')]
     status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='ativo')
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
