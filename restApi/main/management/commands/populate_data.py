@@ -116,6 +116,8 @@ class Command(BaseCommand):
                     nome=fake.name(),
                     telefone=fake.phone_number(),
                     cpf=fake.cpf(),
+                    email=fake.email(),
+                    profissao=fake.job(),
                     cep=fake.postcode(),
                     cliente=cliente,
                     rua=fake.street_name(),
@@ -193,7 +195,6 @@ class Command(BaseCommand):
         processos = []
         for cliente in clientes:
             processo = Processo.objects.create(
-                titulo=f"Processo de {cliente.nome}",
                 numeroProcesso=str(fake.random_int(100000, 999999)),
                 clienteId=cliente,
                 advogadoCriadorId=random.choice(advogados),
