@@ -85,21 +85,11 @@ class AdvogadoRegisterView(APIView):
     Endpoint para registro de advogados.
     Delega validação e criação ao AdvogadoService.
     """
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = []
+
     def post(self, request):
         service = AdvogadoService()
-        
-        # Validar chave de API
-        chave_recebida = request.headers.get(
-            getattr(settings, 'API_HEADER_NAME', 'X-Api-Key')
-        )
-        if not service.validate_chave_login(chave_recebida):
-            return JsonResponse(
-                {'error': 'Chave de API inválida.'},
-                status=403
-            )
-        
+
         # Obter dados do request
         try:
             data = json.loads(request.body)
