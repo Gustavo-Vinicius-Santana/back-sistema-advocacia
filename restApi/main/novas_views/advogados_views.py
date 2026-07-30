@@ -12,6 +12,8 @@ import json
 from django.http import JsonResponse
 from .permissions import *
 from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 import jwt
 
@@ -24,19 +26,6 @@ class AdvogadosOnlineView(APIView):
         advogados_online = Advogado.objects.filter(is_online=True)
         serializer = AdvogadoSerializer(advogados_online, many=True)
         return Response(serializer.data)
-
-
-class AdvogadoLogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        service = AdvogadoService()
-        try:
-            service.atualizar_status_online(request.user.id, is_online=False)
-            return Response({"detail": "Logout realizado com sucesso."})
-        except ValueError as e:
-            return Response({"error": str(e)}, status=404)
-
 
 class AdvogadosResumidoView(APIView):
     permission_classes = [OnlyAdminDELETE]
@@ -74,14 +63,10 @@ class AdvogadoUserInfoView(APIView):
     queryset = Advogado.objects.all()
     
     def get(self, request, *args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return Response({'error': 'Token nao encontrado.'})
+        # With cookie-based authentication, request.user is already populated
+        # by the authentication middleware
         try:
-            formated_token = token.split(' ')[1]
-            payload = jwt.decode(formated_token, settings.SECRET_KEY, algorithms=['HS256'])
-            advogado_id = payload.get('user_id')
-            advogado = Advogado.objects.get(id=advogado_id)
+            advogado = request.user
             serializer = AdvogadoSerializer(advogado)
             serializer_formatado = dict(serializer.data)
             if advogado.is_staff:
@@ -91,12 +76,6 @@ class AdvogadoUserInfoView(APIView):
             else:
                 serializer_formatado['role'] = 'advogado'
             return Response(serializer_formatado)
-        except IndexError:
-            return Response({'error': 'Formato do token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-        except InvalidTokenError:
-            return Response({'error': 'Token inválido ou expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Advogado.DoesNotExist:
-            return Response({'error': 'Advogado não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -106,21 +85,11 @@ class AdvogadoRegisterView(APIView):
     Endpoint para registro de advogados.
     Delega validação e criação ao AdvogadoService.
     """
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = []
+
     def post(self, request):
         service = AdvogadoService()
-        
-        # Validar chave de API
-        chave_recebida = request.headers.get(
-            getattr(settings, 'API_HEADER_NAME', 'X-Api-Key')
-        )
-        if not service.validate_chave_login(chave_recebida):
-            return JsonResponse(
-                {'error': 'Chave de API inválida.'},
-                status=403
-            )
-        
+
         # Obter dados do request
         try:
             data = json.loads(request.body)
@@ -213,23 +182,30 @@ class AdvogadoLogoutView(APIView):
     Endpoint de logout.
     Marca o advogado como offline via service.
     """
-    permission_classes = [IsAuthenticated]
+    # Logout must also clear stale cookies after the access token expires.
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
-        service = AdvogadoService()
-        try:
-            service.atualizar_status_online(
-                request.user.id,
-                is_online=False
-            )
-            return Response(
-                {"detail": "Logout realizado com sucesso."}
-            )
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        refresh_token = request.COOKIES.get('refresh_token')
+
+        if refresh_token:
+            try:
+                refresh = RefreshToken(refresh_token)
+                AdvogadoService().atualizar_status_online(
+                    refresh['user_id'],
+                    is_online=False,
+                )
+                refresh.blacklist()
+            except (TokenError, ValueError, KeyError):
+                # A token may already be expired or revoked. Cookie removal
+                # still needs to succeed in this case.
+                pass
+
+        response = Response({"detail": "Logout realizado com sucesso."})
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+        return response
 
 
 class AdvogadosResumidoView(APIView):
@@ -269,41 +245,15 @@ class AdvogadosDashboardView(APIView):
 
 class AdvogadoUserInfoView(APIView):
     """Retorna informações do usuário autenticado"""
-    permission_classes = [OnlyAdminDELETE]
+    permission_classes = [IsAuthenticated]
     
     def get(self, request, *args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return Response({'error': 'Token não encontrado.'})
-        
-        try:
-            formated_token = token.split(' ')[1]
-            payload = jwt.decode(
-                formated_token,
-                settings.SECRET_KEY,
-                algorithms=['HS256']
-            )
-            advogado_id = payload.get('user_id')
-            advogado = Advogado.objects.get(id=advogado_id)
-            serializer = AdvogadoSerializer(advogado)
-            return Response(serializer.data)
-        except IndexError:
-            return Response(
-                {'error': 'Formato do token inválido.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except InvalidTokenError:
-            return Response(
-                {'error': 'Token inválido ou expirado.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except Advogado.DoesNotExist:
-            return Response(
-                {'error': 'Advogado não encontrado.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        serializer = AdvogadoSerializer(request.user)
+        serializer_formatado = dict(serializer.data)
+        if request.user.is_staff:
+            serializer_formatado['role'] = 'staff'
+        elif request.user.is_superuser:
+            serializer_formatado['role'] = 'admin'
+        else:
+            serializer_formatado['role'] = 'advogado'
+        return Response(serializer_formatado)

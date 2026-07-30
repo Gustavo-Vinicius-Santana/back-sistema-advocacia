@@ -2,43 +2,24 @@ import os
 from pathlib import Path
 from corsheaders.defaults import default_headers
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-gop1+ud5cyvxp(t^rnmn9)=h1x22(#m&*-_v2=+qt$aa5)&+x2'
+DEVELOPMENT_SECRET_KEY = 'django-insecure-development-only-change-before-production'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', DEVELOPMENT_SECRET_KEY)
 
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
+
+if not DEBUG and SECRET_KEY == DEVELOPMENT_SECRET_KEY:
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be configured when DEBUG=False.')
 
 # IMPORTANTE PARA DOCKER
 if os.getenv('DOCKER') == '1':
-    print("🔄 Ambiente Docker detectado")
-    
-    ALLOWED_HOSTS = [
-        '*',                    # Aceita qualquer host
-        'restapi_django',       # Nome do container
-        'localhost',            # Para acessar do host
-        '127.0.0.1',
-        '0.0.0.0',
-        'host.docker.internal', # Host da máquina (para Windows/Mac)
-    ]
-    
-    # Patch para Docker
-    import django.http.request
-    django.http.request.host_validation_re = None
-    
-    original_get_host = django.http.HttpRequest.get_host
-    
-    def docker_get_host(self):
-        host = self.META.get('HTTP_HOST', 'restapi_django')
-        # Se for um host com porta, remove para validação
-        if ':' in host:
-            host_without_port = host.split(':')[0]
-            # Retorna o host original, mas valida sem porta
-            if host_without_port in ALLOWED_HOSTS or '*' in ALLOWED_HOSTS:
-                return host
-        return original_get_host(self)
-    
-    django.http.HttpRequest.get_host = docker_get_host
+    ALLOWED_HOSTS = os.getenv(
+        'DJANGO_ALLOWED_HOSTS',
+        'localhost,127.0.0.1,restapi_django,host.docker.internal',
+    ).split(',')
 
 else:
     # Ambiente local (Django rodando localmente)
@@ -60,8 +41,13 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'restApi.authentication.CookieJWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '5/minute',
+        'password_reset': '3/hour',
+        'token_refresh': '30/minute',
+    },
     'DATE_FORMAT': "%Y-%m-%d",
     'DATETIME_FORMAT': "%Y-%m-%d",
 }
@@ -80,12 +66,39 @@ MIDDLEWARE = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000',
+).split(',')
+
+# A aplicação Next e a API devem usar o mesmo hostname em desenvolvimento
+# (por exemplo, ambas em "localhost", e não alternar com 127.0.0.1).
+# Cookies SameSite=None, usados em produção, exigem HTTPS nos navegadores.
+JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
+JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'advkey',
 ]
 
-API_SECRET_KEY = "3f0c35dc-73b4-4c7d-862e-09ee041c5a7c"
+# CSRF trusted origins for cookie-based authentication
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# Disable CSRF for API views (using JWT authentication)
+CSRF_COOKIE_SECURE = JWT_COOKIE_SECURE
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = JWT_COOKIE_SAMESITE
+
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+API_SECRET_KEY = os.getenv('API_SECRET_KEY', '')
 API_HEADER_NAME = "AdvKey"
 ROOT_URLCONF = 'restApi.urls'
 AUTH_USER_MODEL = 'main.Advogado'
@@ -158,7 +171,10 @@ AUTHENTICATION_BACKENDS = [
 
 SIMPLE_JWT = {
     "ALGORITHM": "HS256",
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    "SIGNING_KEY": os.getenv('JWT_SIGNING_KEY', SECRET_KEY),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
