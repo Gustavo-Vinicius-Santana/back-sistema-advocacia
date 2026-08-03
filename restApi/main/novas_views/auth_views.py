@@ -10,7 +10,11 @@ import json
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.views.decorators.csrf import (
+    csrf_protect,
+    ensure_csrf_cookie,
+    csrf_exempt,
+)
 from ..models import Advogado
 from ..emailSender import EmailSender
 from django.conf import settings
@@ -147,7 +151,7 @@ class ValidateResetTokenView(APIView):
             return JsonResponse({'valid': False}, status=200)
 
 
-@method_decorator(csrf_protect, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomTokenRefreshView(APIView):
     """
     Custom token refresh view that reads refresh token from HTTP-only cookie
