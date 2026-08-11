@@ -74,7 +74,12 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 
 # A aplicação Next e a API devem usar o mesmo hostname em desenvolvimento
 # (por exemplo, ambas em "localhost", e não alternar com 127.0.0.1).
-# Cookies SameSite=None, usados em produção, exigem HTTPS nos navegadores.
+#
+# Para cross-site (Vercel + outro provedor):
+# - Produção: JWT_COOKIE_SECURE=true, JWT_COOKIE_SAMESITE=None
+# - Desenvolvimento: JWT_COOKIE_SECURE=false, JWT_COOKIE_SAMESITE=Lax
+#
+# Cookies SameSite=None exigem HTTPS nos navegadores.
 JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
 JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
@@ -82,13 +87,15 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'advkey',
 ]
 
-# CSRF trusted origins for cookie-based authentication
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
-
-# Disable CSRF for API views (using JWT authentication)
-CSRF_COOKIE_SECURE = JWT_COOKIE_SECURE
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = JWT_COOKIE_SAMESITE
+# Configuração de CSRF
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
+CSRF_COOKIE_HTTPONLY = False  # JavaScript precisa ler o token
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000',
+).split(',')
 
 SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
