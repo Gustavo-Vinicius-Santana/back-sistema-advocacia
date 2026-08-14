@@ -15,7 +15,7 @@ import json
 from .services import TarefasServices
 from .permissions import *
 import jwt
-from  django.conf import settings
+from django.conf import settings
 
 class TarefasViewSet(viewsets.ModelViewSet):
     service  = TarefasServices()
@@ -76,18 +76,17 @@ class TarefasViewSet(viewsets.ModelViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        token = request.headers.get('Authorization')
+        token = request.COOKIES.get('access_token')
 
         if not token:
             return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            token_format = token.split(' ')[1]
-        except IndexError:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            advogado_id = payload.get('user_id')
+            advogado = Advogado.objects.get(id=advogado_id)
+        except (jwt.PyJWTError, Advogado.DoesNotExist):
             return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-        advogado_id = payload.get('user_id')
-        advogado = Advogado.objects.get(id=advogado_id)
         dados_antes = self.get_serializer(instance).data.copy()  
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
