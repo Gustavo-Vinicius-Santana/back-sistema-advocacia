@@ -14,6 +14,8 @@ from .permissions import *
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 
 import jwt
 
@@ -177,6 +179,7 @@ class AdvogadosOnlineView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_protect, name='dispatch')
 class AdvogadoLogoutView(APIView):
     """
     Endpoint de logout.
