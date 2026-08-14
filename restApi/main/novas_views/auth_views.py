@@ -8,7 +8,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework.throttling import ScopedRateThrottle
 import json
 from django.http import JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
 from ..models import Advogado
 from ..emailSender import EmailSender
@@ -16,6 +16,8 @@ from django.conf import settings
 from datetime import timedelta
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(csrf_protect, name='dispatch')
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     authentication_classes = []
@@ -74,6 +76,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
     
    
+@method_decorator(csrf_exempt, name='dispatch')
 class ResetPasswordView(APIView):
     authentication_classes = []
     throttle_scope = 'password_reset'
@@ -109,6 +112,7 @@ class ResetPasswordView(APIView):
 
         
     
+@method_decorator(csrf_exempt, name='dispatch')
 class EmailRequestSenha(APIView):
     authentication_classes = []
     throttle_scope = 'password_reset'
@@ -143,6 +147,8 @@ class ValidateResetTokenView(APIView):
             return JsonResponse({'valid': False}, status=200)
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(csrf_protect, name='dispatch')
 class CustomTokenRefreshView(APIView):
     """
     Custom token refresh view that reads refresh token from HTTP-only cookie
@@ -152,10 +158,6 @@ class CustomTokenRefreshView(APIView):
     authentication_classes = []
     throttle_scope = 'token_refresh'
     throttle_classes = [ScopedRateThrottle]
-
-    @method_decorator(ensure_csrf_cookie)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
