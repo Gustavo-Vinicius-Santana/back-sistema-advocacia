@@ -1,0 +1,57 @@
+services:
+  django:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: restapi_django
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER=1
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-true}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-development-only-change-before-production}
+      - JWT_SIGNING_KEY=${JWT_SIGNING_KEY:-django-insecure-development-only-change-before-production}
+      - API_SECRET_KEY=${API_SECRET_KEY:-}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,restapi_django,host.docker.internal}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - JWT_COOKIE_SECURE=${JWT_COOKIE_SECURE:-false}
+      - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
+      - POSTGRES_DB=${POSTGRES_DB:-restapi}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "python manage.py migrate && gunicorn restApi.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile -"
+    networks:
+      - dev-network
+
+  db:
+    image: postgres:16
+    container_name: restapi_postgres
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-restapi}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dev-network
+
+volumes:
+  postgres_data:
+
+networks:
+  dev-network:
