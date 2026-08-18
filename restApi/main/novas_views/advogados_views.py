@@ -206,9 +206,9 @@ class AdvogadoLogoutView(APIView):
                 pass
 
         response = Response({"detail": "Logout realizado com sucesso."})
-        # Deletar cookies - em cross-origin eles estão no domínio da API
-        response.delete_cookie('access_token', path='/', secure=settings.JWT_COOKIE_SECURE)
-        response.delete_cookie('refresh_token', path='/', secure=settings.JWT_COOKIE_SECURE)
+        # Deletar cookies - o método delete_cookie do Django não aceita parâmetros como secure/samesite
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
         return response
 
 
