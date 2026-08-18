@@ -74,7 +74,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = env_csv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,https://front-sistema-advocacia.vercel.app' if DEBUG else 'https://front-sistema-advocacia.vercel.app',
+    'http://localhost:3000,http://127.0.0.1:3000' if DEBUG else '',
 )
 
 # A aplicação Next e a API devem usar o mesmo hostname em desenvolvimento
@@ -103,7 +103,7 @@ CSRF_COOKIE_HTTPONLY = False  # JavaScript precisa ler o token
 CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax' if DEBUG else 'None')
 CSRF_TRUSTED_ORIGINS = env_csv(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,https://front-sistema-advocacia.vercel.app' if DEBUG else 'https://front-sistema-advocacia.vercel.app',
+    'http://localhost:3000,http://127.0.0.1:3000' if DEBUG else '',
 )
 
 SECURE_SSL_REDIRECT = not DEBUG
