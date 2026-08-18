@@ -86,7 +86,7 @@ CORS_ALLOWED_ORIGINS = env_csv(
 #
 # Cookies SameSite=None exigem HTTPS nos navegadores.
 JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
-JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax' if DEBUG else 'None')
 FRONTEND_URL = os.getenv(
     'FRONTEND_URL',
     'http://localhost:3000' if DEBUG else '',
@@ -99,7 +99,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
 CSRF_COOKIE_HTTPONLY = False  # JavaScript precisa ler o token
-CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax' if DEBUG else 'None')
 CSRF_TRUSTED_ORIGINS = env_csv(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost:3000,http://127.0.0.1:3000' if DEBUG else '',

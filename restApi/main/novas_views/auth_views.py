@@ -8,6 +8,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework.throttling import ScopedRateThrottle
 import json
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
 from ..models import Advogado
@@ -206,4 +207,7 @@ class CsrfTokenView(APIView):
     permission_classes = []
 
     def get(self, request):
-        return JsonResponse({"detail": "CSRF cookie set"})
+        return JsonResponse({
+            "detail": "CSRF cookie set",
+            "csrfToken": get_token(request),
+        })
