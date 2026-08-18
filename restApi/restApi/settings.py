@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import dj_database_url
 from corsheaders.defaults import default_headers
 from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
@@ -14,16 +15,20 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
 if not DEBUG and SECRET_KEY == DEVELOPMENT_SECRET_KEY:
     raise ImproperlyConfigured('DJANGO_SECRET_KEY must be configured when DEBUG=False.')
 
-# IMPORTANTE PARA DOCKER
-if os.getenv('DOCKER') == '1':
-    ALLOWED_HOSTS = os.getenv(
-        'DJANGO_ALLOWED_HOSTS',
-        'localhost,127.0.0.1,restapi_django,host.docker.internal',
-    ).split(',')
+def env_csv(name, default=''):
+    """Lê uma variável CSV, descartando espaços e itens vazios."""
+    return [item.strip() for item in os.getenv(name, default).split(',') if item.strip()]
 
-else:
-    # Ambiente local (Django rodando localmente)
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# O Render informa automaticamente o hostname público do serviço. Domínios
+# personalizados devem ser incluídos em DJANGO_ALLOWED_HOSTS.
+ALLOWED_HOSTS = env_csv(
+    'DJANGO_ALLOWED_HOSTS',
+    'localhost,127.0.0.1,restapi_django,host.docker.internal' if DEBUG else '',
+)
+render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -67,10 +72,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = os.getenv(
+CORS_ALLOWED_ORIGINS = env_csv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000',
-).split(',')
+    'http://localhost:3000,http://127.0.0.1:3000' if DEBUG else '',
+)
 
 # A aplicação Next e a API devem usar o mesmo hostname em desenvolvimento
 # (por exemplo, ambas em "localhost", e não alternar com 127.0.0.1).
@@ -82,7 +87,10 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 # Cookies SameSite=None exigem HTTPS nos navegadores.
 JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
 JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+FRONTEND_URL = os.getenv(
+    'FRONTEND_URL',
+    'http://localhost:3000' if DEBUG else '',
+).rstrip('/')
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'advkey',
 ]
@@ -92,10 +100,10 @@ CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
 CSRF_COOKIE_HTTPONLY = False  # JavaScript precisa ler o token
 CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
-CSRF_TRUSTED_ORIGINS = os.getenv(
+CSRF_TRUSTED_ORIGINS = env_csv(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000',
-).split(',')
+    'http://localhost:3000,http://127.0.0.1:3000' if DEBUG else '',
+)
 
 SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
@@ -128,11 +136,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'restApi.wsgi.application'
 
-# ----------------------------------------------
-# ✅ SQLITE DENTRO DO CONTAINER DOCKER
-# ----------------------------------------------
-if os.environ.get("DOCKER") == "1":
-    # ▶ Docker → PostgreSQL
+# O Render fornece DATABASE_URL. Ela tem prioridade sobre a configuração
+# Docker local e não deve ser versionada.
+if os.getenv('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif os.environ.get("DOCKER") == "1":
+    # Docker local → PostgreSQL
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -144,14 +158,13 @@ if os.environ.get("DOCKER") == "1":
         }
     }
 else:
-    # ▶ Fora do Docker → SQLite
+    # Fora do Docker/Render → SQLite
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-# ----------------------------------------------
 
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
