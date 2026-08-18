@@ -206,8 +206,17 @@ class AdvogadoLogoutView(APIView):
                 pass
 
         response = Response({"detail": "Logout realizado com sucesso."})
-        response.delete_cookie('access_token', path='/', secure=settings.JWT_COOKIE_SECURE, samesite=settings.JWT_COOKIE_SAMESITE)
-        response.delete_cookie('refresh_token', path='/', secure=settings.JWT_COOKIE_SECURE, samesite=settings.JWT_COOKIE_SAMESITE)
+        # Deletar cookies com os mesmos parâmetros usados na criação
+        samesite_value = settings.JWT_COOKIE_SAMESITE if settings.JWT_COOKIE_SAMESITE != 'None' else None
+        cookie_kwargs = {
+            'path': '/',
+            'secure': settings.JWT_COOKIE_SECURE,
+        }
+        if samesite_value:
+            cookie_kwargs['samesite'] = samesite_value
+
+        response.delete_cookie('access_token', **cookie_kwargs)
+        response.delete_cookie('refresh_token', **cookie_kwargs)
         return response
 
 
