@@ -39,16 +39,24 @@ class Cliente(models.Model):
     
 class Representante(models.Model):
     nome = models.CharField(max_length=255)
-    telefone = models.CharField(max_length=20,unique=True)
-    cpf = models.CharField(max_length=14,unique=True)
+    telefone = models.CharField(max_length=20, unique=True)
+    email = models.EmailField(blank=True)
+    profissao = models.CharField(max_length=255, blank=True)
+    cpf = models.CharField(max_length=14, unique=True)
     cep = models.CharField(max_length=10)
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='representantes'
+    )
     rua = models.CharField(max_length=255)
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255)
     estado = models.CharField(max_length=255)
     bairro = models.CharField(max_length=255)
-    complemento = models.CharField(max_length=255,blank=True)
+    complemento = models.CharField(max_length=255, blank=True)
     observacoes = models.TextField(blank=True)
 
     def __str__(self):

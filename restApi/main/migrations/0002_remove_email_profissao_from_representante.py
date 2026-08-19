@@ -1,6 +1,4 @@
-# Generated migration to remove email and profissao fields from Representante model
-
-from django.db import migrations
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -10,12 +8,20 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
+        migrations.AddField(
             model_name='representante',
             name='email',
+            field=models.EmailField(
+                blank=True,
+                max_length=254,
+            ),
         ),
-        migrations.RemoveField(
+        migrations.AddField(
             model_name='representante',
             name='profissao',
+            field=models.CharField(
+                blank=True,
+                max_length=255,
+            ),
         ),
     ]
