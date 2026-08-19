@@ -91,15 +91,8 @@ class AdvogadoRegisterView(APIView):
 
     def post(self, request):
         service = AdvogadoService()
+        data = request.data
 
-        # Obter dados do request
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse(
-                {"error": "JSON inválido."},
-                status=400
-            )
         
         # Registrar advogado via service
         try:
@@ -108,7 +101,7 @@ class AdvogadoRegisterView(APIView):
                 email=data.get('email'),
                 telefone=data.get('telefone'),
                 oab=data.get('oab'),
-                foto=data.get('foto'),
+                foto=request.FILES.get('foto') or data.get('foto'),
                 is_staff=data.get('is_staff', False),
                 password=data.get('password')
             )
