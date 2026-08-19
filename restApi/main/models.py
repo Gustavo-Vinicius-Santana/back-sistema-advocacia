@@ -40,8 +40,6 @@ class Cliente(models.Model):
 class Representante(models.Model):
     nome = models.CharField(max_length=255)
     telefone = models.CharField(max_length=20,unique=True)
-    email = models.EmailField(default='nenhum@provedor.com',unique=True, blank=True)
-    profissao = models.CharField(max_length=255,blank=True)
     cpf = models.CharField(max_length=14,unique=True)
     cep = models.CharField(max_length=10)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, related_name='representantes')
