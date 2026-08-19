@@ -71,10 +71,10 @@ class AdvogadoUserInfoView(APIView):
             advogado = request.user
             serializer = AdvogadoSerializer(advogado)
             serializer_formatado = dict(serializer.data)
-            if advogado.is_staff:
-                serializer_formatado['role'] = 'staff'
-            elif advogado.is_superuser:
+            if advogado.is_superuser:
                 serializer_formatado['role'] = 'admin'
+            elif advogado.is_staff:
+                serializer_formatado['role'] = 'staff'
             else:
                 serializer_formatado['role'] = 'advogado'
             return Response(serializer_formatado)
@@ -238,19 +238,3 @@ class AdvogadosDashboardView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-class AdvogadoUserInfoView(APIView):
-    """Retorna informações do usuário autenticado"""
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request, *args, **kwargs):
-        serializer = AdvogadoSerializer(request.user)
-        serializer_formatado = dict(serializer.data)
-        if request.user.is_staff:
-            serializer_formatado['role'] = 'staff'
-        elif request.user.is_superuser:
-            serializer_formatado['role'] = 'admin'
-        else:
-            serializer_formatado['role'] = 'advogado'
-        return Response(serializer_formatado)
