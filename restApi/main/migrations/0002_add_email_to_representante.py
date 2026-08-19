@@ -14,20 +14,11 @@ class Migration(migrations.Migration):
             model_name='representante',
             name='email',
             field=models.EmailField(blank=True, default='nenhum@provedor.com', unique=True),
+            preserve_default=False,
         ),
         migrations.AddField(
             model_name='representante',
             name='profissao',
             field=models.CharField(blank=True, max_length=255),
-        ),
-        migrations.AlterField(
-            model_name='representante',
-            name='cep',
-            field=models.CharField(max_length=10),
-        ),
-        migrations.AlterField(
-            model_name='representante',
-            name='numero',
-            field=models.IntegerField(default=0),
         ),
     ]
