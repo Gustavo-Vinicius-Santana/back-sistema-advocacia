@@ -108,6 +108,17 @@ class EscritoriosSerializer(serializers.ModelSerializer):
         return endereco
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        
+        # Adiciona as informações do advogado ao token
+        token['advogado_id'] = user.id
+        token['advogado_nome'] = user.nome
+        token['advogado_email'] = user.email
+        
+        return token
+    
     def validate(self, attrs):
         # Adiciona etapas customizadas ao login
         data = super().validate(attrs)
@@ -115,6 +126,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if user.is_active:
             user.is_online = True
             user.save()
+        
+        # Adiciona o campo remember_me à resposta
+        remember_me = attrs.get('remember_me', False)
+        data['remember_me'] = remember_me
+        
         return data
     
 class ClienteEsperaSerializer(serializers.ModelSerializer):

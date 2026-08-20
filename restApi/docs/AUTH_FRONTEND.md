@@ -8,7 +8,7 @@ A API autentica o usuário por cookies, não por token no `localStorage`,
 Após o login, a API grava dois cookies `HttpOnly`:
 
 - `access_token`: JWT de acesso, com validade de **15 minutos**;
-- `refresh_token`: JWT de renovação, com validade de **7 dias**. A cada
+- `refresh_token`: JWT de renovação, com validade de **8 horas** (padrão) ou **7 dias** (se "mantenha-me logado" estiver ativo). A cada
   renovação o refresh token é rotacionado.
 
 Como os cookies são `HttpOnly`, o JavaScript não consegue (e não deve) ler os
@@ -35,7 +35,8 @@ em `CORS_ALLOWED_ORIGINS` e `CSRF_TRUSTED_ORIGINS`.
 1. Ao abrir a aplicação (antes de qualquer `POST`, `PUT`, `PATCH` ou `DELETE`),
    faça `GET /api/csrf/`. A resposta configura/renova o cookie `csrftoken`.
 2. Faça o login em `POST /api/token/` com as credenciais e envie o cabeçalho
-   `X-CSRFToken`, usando o valor obtido no passo anterior.
+   `X-CSRFToken`, usando o valor obtido no passo anterior. Inclua o campo `remember_me`
+   para definir a duração do refresh token (8 horas se false, 7 dias se true).
 3. Em caso de sucesso (`200`), os cookies `access_token` e `refresh_token` são
    recebidos por `Set-Cookie`. A resposta não contém os JWTs no JSON.
 4. Busque o estado inicial do usuário em `GET /api/advogado/current-user/`.
@@ -50,7 +51,7 @@ export async function initializeCsrf() {
   await fetch(`${API_URL}/csrf/`, { credentials: 'include' });
 }
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, rememberMe: boolean = false) {
   await initializeCsrf();
   const csrf = getCookie('csrftoken');
 
@@ -61,7 +62,7 @@ export async function login(email: string, password: string) {
       'Content-Type': 'application/json',
       ...(csrf ? { 'X-CSRFToken': csrf } : {}),
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, remember_me: rememberMe }),
   });
 
   if (!response.ok) throw new Error('Usuário ou senha inválidos.');

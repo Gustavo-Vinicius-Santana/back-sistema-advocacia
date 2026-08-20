@@ -25,30 +25,38 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_scope = 'login'
     throttle_classes = [ScopedRateThrottle]
     
-    
-    @classmethod
-    def get_token(cls, advogado):
-        token = super().get_token(advogado)
-        
-        # Adicione as informações do advogado ao token
-        token['advogado_id'] = advogado.id
-        token['advogado_nome'] = advogado.nome
-        token['advogado_email'] = advogado.email
-        advogado.is_online = True
-        advogado.save()
-        
-             
-        return token
-    
     def post(self, request, *args, **kwargs):
+        # Verifica o campo remember_me antes de processar o login
+        remember_me = request.data.get('remember_me', False)
+        
+        # Ajusta dinamicamente a configuração do SimpleJWT
+        from rest_framework_simplejwt.settings import api_settings
+        original_lifetime = api_settings.REFRESH_TOKEN_LIFETIME
+        
+        if remember_me:
+            api_settings.REFRESH_TOKEN_LIFETIME = timedelta(days=7)
+        else:
+            api_settings.REFRESH_TOKEN_LIFETIME = timedelta(hours=8)
+        
         # Get the standard response from parent
         response = super().post(request, *args, **kwargs)
+        
+        # Restaura a configuração original
+        api_settings.REFRESH_TOKEN_LIFETIME = original_lifetime
         
         # Extract tokens from response data
         access_token = response.data.get('access')
         refresh_token = response.data.get('refresh')
         
         if access_token and refresh_token:
+            # Define refresh token lifetime for cookie based on remember_me
+            if remember_me:
+                refresh_lifetime_seconds = 7 * 24 * 60 * 60  # 7 dias em segundos
+            else:
+                refresh_lifetime_seconds = 8 * 60 * 60  # 8 horas em segundos
+            
+            print(f"DEBUG: remember_me={remember_me}, refresh_lifetime_seconds={refresh_lifetime_seconds}")
+            
             # Create HTTP-only cookies
             # Access token cookie
             response.set_cookie(
@@ -65,7 +73,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             response.set_cookie(
                 'refresh_token',
                 refresh_token,
-                max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME', timedelta(days=7)).total_seconds(),
+                max_age=refresh_lifetime_seconds,
                 path='/',
                 secure=settings.JWT_COOKIE_SECURE,
                 httponly=True,
@@ -73,6 +81,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             )
             del response.data['access']
             del response.data['refresh']
+            if 'remember_me' in response.data:
+                del response.data['remember_me']
 
         return response
     
