@@ -5,23 +5,23 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=255)
     cpf = models.CharField(max_length=14, unique=True)
     telefone = models.CharField(max_length=20)
-    dataNascimento = models.DateField(blank=True, null=True)
+    dataNascimento = models.DateField()
     profissao = models.CharField(max_length=255,blank=True)
-    inss = models.CharField(max_length=255,blank=True)
+    inss = models.CharField(max_length=255)
     cep = models.CharField(max_length=20,blank=True)
     complemento = models.CharField(max_length=255,blank=True)
     contrato = models.BooleanField(default=True)
     contactadoPor = models.CharField(max_length=255,blank=True)
     motivo = models.TextField(blank=True)
-    rua = models.CharField(max_length=255,blank=True)
+    rua = models.CharField(max_length=255)
     numero = models.IntegerField(null=True)
-    cidade = models.CharField(max_length=255,blank=True)
-    estado = models.CharField(max_length=255,blank=True)
-    bairro = models.CharField(max_length=255,blank=True)
+    cidade = models.CharField(max_length=255)
+    estado = models.CharField(max_length=255)
+    bairro = models.CharField(max_length=255)
     observacoes = models.TextField(blank=True)
     foto = models.URLField(max_length=500, blank=True, null=True)
     contactado = models.BooleanField(default=False)
-    parceiro = models.ForeignKey("Parceiros", on_delete=models.SET_NULL, null=True, blank=True, related_name="clientes")
+    parceiro = models.ForeignKey("Parceiros", on_delete=models.SET_NULL, null=True, related_name="clientes")
     """o Django não consegue criar campos apos a leitura da classe, então o
     campo motivo deve ser criado e ignorado caso c/ontrato for TRUE,
     garantido que seja escrito se for False pelo validation error la no serializer.py.
@@ -77,8 +77,8 @@ class ClienteEspera(models.Model):
 class Parceiros(models.Model):
     nome = models.CharField(max_length=255)
     email = models.EmailField(default='nenhum@provedor.com', unique=True)
-    telefone = models.CharField(max_length=20, default="Sem telefone.", unique=True)
-    cpf = models.CharField(max_length=18, default="Sem CNPJ.",unique=True)
+    telefone = models.CharField(max_length=20, unique=True)
+    cpf = models.CharField(max_length=18,unique=True)
     rua = models.CharField(max_length=255,blank=True)
     numero = models.IntegerField(default=0)
     cidade = models.CharField(max_length=255,blank=True)
@@ -92,13 +92,13 @@ class Parceiros(models.Model):
     
 class Escritorios(models.Model):
     nome = models.CharField(max_length=255)
-    rua = models.CharField(max_length=255,blank=True)
-    numero = models.IntegerField(default=0)
-    estado = models.CharField(max_length=255,blank=True)
+    rua = models.CharField(max_length=255)
+    numero = models.IntegerField(default=0, blank=True)
+    estado = models.CharField(max_length=255)
     complemento = models.CharField(max_length=255,blank=True)
-    cep = models.CharField(max_length=20,blank=True)
-    cidade = models.CharField(max_length=255,blank=True)
-    bairro = models.CharField(max_length=255,blank=True)
+    cep = models.CharField(max_length=20)
+    cidade = models.CharField(max_length=255)
+    bairro = models.CharField(max_length=255)
     
     def __str__(self):
         return f'Escritorio {self.nome}'
@@ -184,12 +184,12 @@ class Processo(models.Model):
     clienteId = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE)
     grupoAcao=  models.ForeignKey('GrupoAcao', on_delete=models.PROTECT)
-    tipoAcao = models.ForeignKey('TipoAcao', on_delete=models.PROTECT, blank=True)
+    tipoAcao = models.ForeignKey('TipoAcao', on_delete=models.PROTECT)
     fase = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
     etapa = models.ForeignKey('EtapaProcesso', on_delete=models.PROTECT, blank=True)
-    dataContrato = models.DateTimeField(default='2000-01-01 00:00:00', blank=True)
+    dataContrato = models.DateTimeField(default='2000-01-01 00:00:00')
     CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
-    classificacao = models.CharField(max_length=50, blank=True, choices=CLASSIFICACAO_CHOICES, default='regular')
+    classificacao = models.CharField(max_length=50, choices=CLASSIFICACAO_CHOICES, default='regular')
     observacoes = models.TextField(blank=True)
     prioritario = models.BooleanField(default=False)
     concluido = models.BooleanField(default=False)
@@ -219,12 +219,12 @@ class EtapaProcesso(models.Model):
         return self.nome
 
 class Tarefas(models.Model):
-    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador', blank=True)
+    advogadoCriadorId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoCriador')
     advogadoResponsavelId = models.ForeignKey(Advogado, on_delete=models.CASCADE,related_name='advogadoResponsavel')
     processoOrigemId = models.ForeignKey(Processo, on_delete=models.CASCADE,default=0)    
-    tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT, null=True, blank=True)
+    tipoTarefa = models.ForeignKey('TipoTarefa', on_delete=models.PROTECT)
     dataInicio = models.DateTimeField(auto_now_add=True)
-    prazoFinal = models.DateTimeField(null=True, blank=True)
+    prazoFinal = models.DateTimeField(null=True)
     urgente = models.BooleanField(default=False,blank=True) # UM FILTRO
     arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
