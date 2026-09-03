@@ -12,9 +12,7 @@ from .emailSender import EmailSender
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField, Count, Q
 import json
-import jwt
 from rest_framework_simplejwt.views import TokenObtainPairView
-from jwt.exceptions import InvalidTokenError
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
@@ -1364,18 +1362,13 @@ class TarefasViewSet(viewsets.ModelViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        token = request.headers.get('Authorization')
-
-        if not token:
-            return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            token_format = token.split(' ')[1]
-        except IndexError:
-            return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-        advogado_id = payload.get('user_id')
-        advogado = Advogado.objects.get(id=advogado_id)
+        
+        # A autenticação já é feita pelo CookieJWTAuthentication
+        # request.user já está populado com o usuário autenticado
+        if not request.user or not request.user.is_authenticated:
+            return Response({'error': 'Usuário não autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        advogado = request.user
         dados_antes = self.get_serializer(instance).data.copy()  
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()  # Atualiza a instância do banco de dados
@@ -1540,9 +1533,6 @@ class ArquivoTarefaViewSet(viewsets.ModelViewSet):
     queryset = ArquivoTarefa.objects.all()
     serializer_class = ArquivoTarefaSerializer
     permission_classes = [IsAuthenticated]
-    
-class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
     
 
     @classmethod
@@ -1785,11 +1775,6 @@ def emailRequestSenha(request):
         return JsonResponse({'message': 'email enviado com sucesso'}, status=201)
     else:
         return JsonResponse({'error': 'Método não permitido.'}, status=405)
-    
-def get_id_from_token(token):
-    token_format = token.split(' ')[1]
-    payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-    return payload.get('user_id')
     
 def validate_reset_token(token):
     try:
@@ -2667,26 +2652,13 @@ def advogadosDashboard(request,advogado_id):
 @permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def advUserInfo(request):
-    token = request.headers.get('Authorization')
-
-    if not token:
-        return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        token_format = token.split(' ')[1]
-        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
-        advogado_id = payload.get('user_id')
-        advogado = Advogado.objects.get(id=advogado_id)
-        serializer = AdvogadoSerializer(advogado)
-        return Response(serializer.data)
-    except IndexError:
-        return Response({'error': 'Formato do token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-    except InvalidTokenError:
-        return Response({'error': 'Token inválido ou expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
-    except Advogado.DoesNotExist:
-        return Response({'error': 'Advogado não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # A autenticação já é feita pelo CookieJWTAuthentication
+    # request.user já está populado com o usuário autenticado
+    if not request.user or not request.user.is_authenticated:
+        return Response({'error': 'Usuário não autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    serializer = AdvogadoSerializer(request.user)
+    return Response(serializer.data)
 
 
 
