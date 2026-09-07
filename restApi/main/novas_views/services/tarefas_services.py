@@ -1,15 +1,16 @@
 from ...models import Tarefas,TipoTarefa,HistoricoTarefas
 from datetime import datetime, timedelta, time
 from django.utils import timezone
-from rest_framework.response import Response
-from django.core.exceptions import FieldError
-from django.db.models import Count, Q
-from rest_framework.exceptions import ValidationError
+from django.db.models import Count, Q, Case, When, IntegerField
 
 
 class TarefasServices:
-    
-    
+    # Constantes de validação
+    ALLOWED_ORDER_FIELDS = [
+        'prazoFinal', '-prazoFinal',
+        'dataInicio', '-dataInicio'
+    ]
+
     def obter_queryset(self)-> Tarefas:
         return Tarefas.objects.all()
     
@@ -76,7 +77,7 @@ class TarefasServices:
         # Filtro por campo composto (FK) - somente se ambos field e value forem fornecidos
         if field and value:
             if field not in allowed_fields:
-                raise ValidationError("Campo de filtro inválido.")
+                raise ValueError("Campo de filtro inválido.")
             match field:
                 case 'advogadoCriadorId':
                     queryset = queryset.filter(advogadoCriadorId__nome__icontains=value)
@@ -88,9 +89,9 @@ class TarefasServices:
                     queryset = queryset.filter(processoOrigemId__clienteId__nome__icontains=value)
         # Se apenas field for fornecido sem value, retorna erro
         elif field and not value:
-            return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
+            raise ValueError("Parâmetro 'value' é obrigatório quando 'field' é fornecido.")
         elif not field and value:
-            return Response({"error": "Parâmetro 'field' é obrigatório quando 'value' é fornecido."}, status=400)
+            raise ValueError("Parâmetro 'field' é obrigatório quando 'value' é fornecido.")
         
         # NOVO: Filtro por ID do cliente
         if cliente_id is not None:
@@ -98,44 +99,32 @@ class TarefasServices:
                 cliente_id_int = int(cliente_id)
                 queryset = queryset.filter(processoOrigemId__clienteId__id=cliente_id_int)
             except ValueError:
-                return Response(
-                    {"error": "ID do cliente deve ser um número válido."}, 
-                    status=400
-                )
-        
+                raise ValueError("ID do cliente deve ser um número válido.")
+
         # Filtro por ID do advogado responsável
         if advogado_responsavel_id is not None:
             try:
                 advogado_id = int(advogado_responsavel_id)
                 queryset = queryset.filter(advogadoResponsavelId__id=advogado_id)
             except ValueError:
-                return Response(
-                    {"error": "ID do advogado responsável deve ser um número válido."}, 
-                    status=400
-                )
-        
+                raise ValueError("ID do advogado responsável deve ser um número válido.")
+
         # Filtro por ID do advogado criador
         if advogado_criador_id is not None:
             try:
                 advogado_id = int(advogado_criador_id)
                 queryset = queryset.filter(advogadoCriadorId__id=advogado_id)
             except ValueError:
-                return Response(
-                    {"error": "ID do advogado criador deve ser um número válido."}, 
-                    status=400
-                )
-        
+                raise ValueError("ID do advogado criador deve ser um número válido.")
+
         # Filtro por ID do processo de origem
         if processo_origem_id is not None:
             try:
                 processo_id = int(processo_origem_id)
                 queryset = queryset.filter(processoOrigemId__id=processo_id)
             except ValueError:
-                return Response(
-                    {"error": "ID do processo de origem deve ser um número válido."}, 
-                    status=400
-                )
-        
+                raise ValueError("ID do processo de origem deve ser um número válido.")
+
         # Filtro por concluida - somente se o parâmetro for fornecido
         if concluida is not None:
             if concluida.lower() in ['true', '1', 'yes', 'verdadeiro', 'sim']:
@@ -143,11 +132,8 @@ class TarefasServices:
             elif concluida.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
                 queryset = queryset.filter(concluida=False)
             else:
-                return Response(
-                    {"error": "Valor inválido para 'concluida'. Use 'true' ou 'false'."}, 
-                    status=400
-                )
-        
+                raise ValueError("Valor inválido para 'concluida'. Use 'true' ou 'false'.")
+
         # Filtro por deletada - somente se o parâmetro for fornecido
         if deletada is not None:
             if deletada.lower() in ['true', '1', 'yes', 'verdadeiro', 'sim']:
@@ -155,19 +141,13 @@ class TarefasServices:
             elif deletada.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
                 queryset = queryset.filter(deletada=False)
             else:
-                return Response(
-                    {"error": "Valor inválido para 'deletada'. Use 'true' ou 'false'."}, 
-                    status=400
-                )
-        
+                raise ValueError("Valor inválido para 'deletada'. Use 'true' ou 'false'.")
+
         # Filtro por status - somente se o parâmetro for fornecido
         if status is not None:
             valid_statuses = ['em aberto', 'atrasada', 'perto do prazo']
             if status not in valid_statuses:
-                return Response(
-                    {"error": f"Status inválido. Status válidos: {', '.join(valid_statuses)}"}, 
-                    status=400
-                )
+                raise ValueError(f"Status inválido. Status válidos: {', '.join(valid_statuses)}")
             queryset = queryset.filter(status=status)
 
         # Filtro por urgente - somente se o parâmetro for fornecido
@@ -177,31 +157,28 @@ class TarefasServices:
             elif urgente.lower() in ['false', '0', 'no', 'falso', 'não', 'nao']:
                 queryset = queryset.filter(urgente=False)
             else:
-                return Response(
-                    {"error": "Valor inválido para 'urgente'. Use 'true' ou 'false'."}, 
-                    status=400
-                )
+                raise ValueError("Valor inválido para 'urgente'. Use 'true' ou 'false'.")
         
-        # Ordenação
+        # Ordenação com hierarquia natural
+        # Hierarquia: Atrasadas > Urgentes > Perto do prazo > Normais
+        # As normais são ordenadas pelo campo order_by selecionado
+        priority_order = Case(
+            When(status='atrasada', then=1),
+            When(urgente=True, then=2),
+            When(status='perto do prazo', then=3),
+            default=4,
+            output_field=IntegerField()
+        )
+
         if order_by:
-            if order_by == 'advogadoCriadorId':
-                queryset = queryset.order_by('advogadoCriadorId__nome')
-            elif order_by == 'advogadoResponsavelId':
-                queryset = queryset.order_by('advogadoResponsavelId__nome')
-            elif order_by == 'processoOrigemId':
-                queryset = queryset.order_by('processoOrigemId__numeroProcesso')
-            elif order_by == 'clienteNome':  # NOVO: Ordenação por nome do cliente
-                queryset = queryset.order_by('processoOrigemId__clienteId__nome')
-            else:
-                # Tenta ordenar pelo campo especificado
-                try:
-                    queryset = queryset.order_by(order_by)
-                except FieldError:
-                    # Se houver erro, mantém ordenação padrão
-                    queryset = queryset.order_by('-urgente', 'prazoFinal')
+            # Verifica se o campo de ordenação é permitido
+            if order_by not in self.ALLOWED_ORDER_FIELDS:
+                raise ValueError(f"Campo de ordenação inválido: {order_by}")
+            # Ordena por prioridade primeiro, depois pelo campo selecionado
+            queryset = queryset.annotate(priority=priority_order).order_by('priority', order_by)
         else:
-            # Ordenação padrão SEMPRE aplicada
-            queryset = queryset.order_by('-urgente', 'prazoFinal')
+            # Ordenação padrão: por prioridade e depois por data de criação (mais recente primeiro)
+            queryset = queryset.annotate(priority=priority_order).order_by('priority', '-dataInicio')
         
        
         return queryset

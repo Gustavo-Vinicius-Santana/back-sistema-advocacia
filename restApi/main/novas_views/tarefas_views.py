@@ -8,7 +8,6 @@ from .pagination_views import StandardResultsSetPagination
 from django.utils import timezone
 from datetime import datetime, timedelta, time
 from rest_framework import status
-from django.core.exceptions import FieldError
 from django.db.models import Q, Count
 from django.http import JsonResponse
 import json
@@ -29,13 +28,13 @@ class TarefasViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         # Começa com todas as tarefas (já otimizadas)
         queryset = self.get_queryset()
-        
+
         service = TarefasServices()
         try:
             queryset = service.list_services(request,queryset)
 
-        except FieldError as e:
-            return Response({'error': str(e)}, status=400)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
         
         # Paginação
         page = self.paginate_queryset(queryset)
@@ -151,26 +150,25 @@ class TipoTarefaViewSet(viewsets.ModelViewSet):
         
         # Ordenação
         if order_by:
-            # Campos permitidos para ordenação
+            # Campos permitidos para ordenação (incluindo versões descendentes)
             allowed_order_fields = [
-                'id', 'nome', 
-                'total_tarefas', 'concluidas', 'pendentes',
-                'pendentes_em_aberto', 'pendentes_atrasadas', 
-                'pendentes_perto_prazo', 'pendentes_urgentes'
+                'id', '-id',
+                'nome', '-nome',
+                'total_tarefas', '-total_tarefas',
+                'concluidas', '-concluidas',
+                'pendentes', '-pendentes',
+                'pendentes_em_aberto', '-pendentes_em_aberto',
+                'pendentes_atrasadas', '-pendentes_atrasadas',
+                'pendentes_perto_prazo', '-pendentes_perto_prazo',
+                'pendentes_urgentes', '-pendentes_urgentes'
             ]
-            
-            # Verifica se é ordenação descendente
-            if order_by.startswith('-'):
-                field_name = order_by[1:]
-            else:
-                field_name = order_by
-            
+
             # Valida o campo de ordenação
-            if field_name not in allowed_order_fields:
+            if order_by not in allowed_order_fields:
                 return Response({
                     "error": f"Campo de ordenação inválido. Campos permitidos: {', '.join(allowed_order_fields)}"
                 }, status=400)
-            
+
             queryset = queryset.order_by(order_by)
         else:
             # Ordenação padrão por nome
