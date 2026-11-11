@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
@@ -159,33 +160,113 @@ class AdvogadoResumidoSerializer(serializers.ModelSerializer):
         
 
 class ProcesssosResumidoSerializer(serializers.ModelSerializer):
-    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True) 
-    cliente = serializers.CharField(source='clienteId.nome',read_only=True)
-    
+    advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome',read_only=True)
+    cliente = serializers.CharField(source='clienteId.nome',read_only=True, allow_null=True)
+    clientesId = serializers.SerializerMethodField()
+
     class Meta:
         model = Processo
-        fields = ['id','advogadoCriadorId','advogadoCriadorNome','cliente']
+        fields = ['id','advogadoCriadorId','advogadoCriadorNome','cliente','clientesId']
+
+    def get_clientesId(self, obj):
+        return list(
+            obj.clientes_associacoes.order_by('ordem', 'id').values_list('cliente_id', flat=True)
+        )
+
 
 class ProcessoSerializer(serializers.ModelSerializer):
+    clientesId = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Cliente.objects.all(), required=False, write_only=True
+    )
+    clienteId = serializers.PrimaryKeyRelatedField(
+        queryset=Cliente.objects.all(), required=True
+    )
     clienteNome = serializers.CharField(source='clienteId.nome', read_only=True)
     dataContrato = serializers.DateTimeField()
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome', read_only=True)
     grupoAcaoNome = serializers.CharField(source='grupoAcao.nome', read_only=True)
     faseNome = serializers.CharField(source='fase.nome', read_only=True)
-    
-    # Adicione estes campos explicitamente
+
     total_tarefas = serializers.IntegerField(read_only=True, required=False)
     tarefas_em_aberto = serializers.IntegerField(read_only=True, required=False)
     tarefas_atrasadas = serializers.IntegerField(read_only=True, required=False)
     tarefas_concluidas = serializers.IntegerField(read_only=True, required=False)
     tarefas_urgentes = serializers.IntegerField(read_only=True, required=False)
     tarefas_perto_prazo = serializers.IntegerField(read_only=True, required=False)
-    
+
     class Meta:
         model = Processo
         fields = '__all__'
-        
-        
+
+    def validate(self, attrs):
+        if 'clientesId' in attrs:
+            clientes = attrs['clientesId']
+            ids = [cliente.pk for cliente in clientes]
+            if len(ids) != len(set(ids)):
+                raise serializers.ValidationError({'clientesId': 'Não repita clientes na lista.'})
+
+            cliente_principal = attrs.get('clienteId')
+            if cliente_principal is None and self.instance is not None:
+                cliente_principal = self.instance.clienteId
+
+            # Aceita a lista completa enviada por versões anteriores do front,
+            # mas mantém clienteId separado na representação e no banco.
+            if cliente_principal is not None:
+                attrs['clientesId'] = [
+                    cliente for cliente in clientes
+                    if cliente.pk != cliente_principal.pk
+                ]
+
+        return attrs
+
+    @staticmethod
+    def _salvar_clientes(instance, clientes):
+        ProcessoCliente = Processo._meta.get_field('clientesId').remote_field.through
+        clientes_unicos = []
+        ids_incluidos = {instance.clienteId_id}
+        for cliente in clientes:
+            if cliente.pk not in ids_incluidos:
+                clientes_unicos.append(cliente)
+                ids_incluidos.add(cliente.pk)
+
+        ProcessoCliente.objects.filter(processo=instance).delete()
+        ProcessoCliente.objects.bulk_create([
+            ProcessoCliente(processo=instance, cliente=cliente, ordem=ordem)
+            for ordem, cliente in enumerate(clientes_unicos)
+        ])
+
+    @transaction.atomic
+    def create(self, validated_data):
+        clientes = validated_data.pop('clientesId', [])
+        instance = super().create(validated_data)
+        self._salvar_clientes(instance, clientes)
+        return instance
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        clientes = validated_data.pop('clientesId', None)
+        instance = super().update(instance, validated_data)
+        if clientes is not None:
+            self._salvar_clientes(instance, clientes)
+        else:
+            # Se o principal foi trocado para um cliente que já era adicional,
+            # removê-lo da lista secundária para não duplicá-lo no processo.
+            ProcessoCliente = Processo._meta.get_field('clientesId').remote_field.through
+            ProcessoCliente.objects.filter(
+                processo=instance,
+                cliente_id=instance.clienteId_id,
+            ).delete()
+        return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['clientesId'] = list(
+            instance.clientes_associacoes.order_by('ordem', 'id')
+            .values_list('cliente_id', flat=True)
+        )
+        return representation
+
+
 class GrupoAcaoSerializer(serializers.ModelSerializer):
     total_processos = serializers.IntegerField(read_only=True)
     arquivados = serializers.IntegerField(read_only=True)
@@ -254,7 +335,9 @@ class TarefasSerializer(serializers.ModelSerializer):
     advogadoCriadorNome = serializers.CharField(source='advogadoCriadorId.nome', read_only=True)
     advogadoResponsavelNome = serializers.CharField(source='advogadoResponsavelId.nome', read_only=True)
     tipoTarefaNome = serializers.CharField(source='tipoTarefa.nome', read_only=True)
-    clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome', read_only=True)
+    clienteNome = serializers.CharField(source='processoOrigemId.clienteId.nome', read_only=True, allow_null=True)
+    clientesId = serializers.SerializerMethodField()
+    clientesNomes = serializers.SerializerMethodField()
     # NOVO: Adiciona o ID do cliente
     clienteId = serializers.SerializerMethodField()
     prazoFinal = serializers.DateTimeField(input_formats=['%Y-%m-%d'])
@@ -277,7 +360,22 @@ class TarefasSerializer(serializers.ModelSerializer):
             # Se houver qualquer erro de atributo, retorna None
             pass
         return None
-        
+
+    def get_clientesId(self, obj):
+        if not obj.processoOrigemId_id:
+            return []
+        return list(
+            obj.processoOrigemId.clientes_associacoes.order_by('ordem', 'id').values_list('cliente_id', flat=True)
+        )
+
+    def get_clientesNomes(self, obj):
+        if not obj.processoOrigemId_id:
+            return []
+        return list(
+            obj.processoOrigemId.clientes_associacoes.order_by('ordem', 'id')
+            .values_list('cliente__nome', flat=True)
+        )
+
 
 class TipoTarefaSerializer(serializers.ModelSerializer):
     # Campos calculados que serão populados via annotate

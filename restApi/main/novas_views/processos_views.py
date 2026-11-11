@@ -44,7 +44,8 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         Lista processos com filtros avançados.
 
         Query params suportados:
-        - cliente_id: ID do cliente
+        - cliente_id: ID de qualquer cliente associado ao processo
+        - clientes_ids: IDs de clientes associados, separados por vírgula
         - status: 'ativo', 'arquivado' ou 'ativo,arquivado'
         - concluido: 'true'/'false'
         - field: campo para filtro específico
@@ -57,6 +58,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
             # Delegar TODA a lógica de filtro ao service
             queryset = self.service.filtrar_e_ordenar_completos(
                 cliente_id=request.query_params.get('cliente_id'),
+                clientes_ids=request.query_params.get('clientes_ids'),
                 status=request.query_params.get('status'),
                 concluido=request.query_params.get('concluido'),
                 field=request.query_params.get('field'),
@@ -130,7 +132,7 @@ class FaseProcessoViewSet(viewsets.ModelViewSet):
         field = request.query_params.get('field')
         value = request.query_params.get('value')
         order_by = request.query_params.get('order_by')
-        
+
         # Campos permitidos para busca
         allowed_fields = ['nome']
         
@@ -301,7 +303,7 @@ class EtapaProcessoViewSet(viewsets.ModelViewSet):
 #view para buscar processos por campo específico
 class BuscarProcessoCampoView(APIView):
     permission_classes = [IsAuthenticated]
-    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clientesId','clienteNome']
     pagination_class = standardResultsSetPagination
     
     def get(self, request):
@@ -323,10 +325,19 @@ class BuscarProcessoCampoView(APIView):
                 queryset = Processo.objects.filter(
                     advogadoCriadorId__nome__icontains=value
                 ).order_by('id')
-            elif field == 'clienteNome':
+            elif field == 'clienteId':
                 queryset = Processo.objects.filter(
                     clienteId__nome__icontains=value
                 ).order_by('id')
+            elif field == 'clientesId':
+                queryset = Processo.objects.filter(
+                    clientesId__nome__icontains=value
+                ).distinct().order_by('id')
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    Q(clienteId__nome__icontains=value)
+                    | Q(clientesId__nome__icontains=value)
+                ).distinct().order_by('id')
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
             
@@ -339,6 +350,15 @@ class BuscarProcessoCampoView(APIView):
                 queryset = Processo.objects.filter(
                     clienteId__nome__icontains=value
                 ).order_by(order_by)
+            elif field == 'clientesId':
+                queryset = Processo.objects.filter(
+                    clientesId__nome__icontains=value
+                ).distinct().order_by(order_by)
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    Q(clienteId__nome__icontains=value)
+                    | Q(clientesId__nome__icontains=value)
+                ).distinct().order_by(order_by)
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
         return Response(ProcessoSerializer(queryset, many=True).data)   
@@ -355,7 +375,9 @@ class ProcessosClientesView(APIView):
             cliente = get_object_or_404(Cliente, id =cliente_id)
         except:
             return JsonResponse({'error':'Cliente nao encontrado'}, status=400)
-        processos = Processo.objects.filter(clienteId=cliente)
+        processos = Processo.objects.filter(
+            Q(clienteId=cliente) | Q(clientesId=cliente)
+        ).distinct()
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -497,4 +519,3 @@ class ProcessosConcluidosEspecificos(APIView):
             serializer.save()
             return JsonResponse(serializer.data, status=200)
         return JsonResponse(serializer.errors, status=400)
-        

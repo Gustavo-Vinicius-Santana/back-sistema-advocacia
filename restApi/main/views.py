@@ -22,7 +22,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import FieldError
 from rest_framework.exceptions import ValidationError
-from django.db.models.functions import ExtractDay, Now
+from django.db.models.functions import ExtractDay, Now, Replace
 from django.db.models import ExpressionWrapper, F, IntegerField
 # Remova DurationField se não estiver usando
 from django.db.models import DateField
@@ -68,22 +68,37 @@ class ClienteViewSet(viewsets.ModelViewSet):
             ),
             # Total de processos ativos
             processos_ativos_count=Count(
-                'processo',
-                filter=Q(processo__status='ativo')
+                'processos_principais',
+                filter=Q(processos_principais__status='ativo'),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='ativo'),
+                distinct=True,
             ),
             # Total de processos arquivados
             processos_arquivados_count=Count(
-                'processo',
-                filter=Q(processo__status='arquivado')
+                'processos_principais',
+                filter=Q(processos_principais__status='arquivado'),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='arquivado'),
+                distinct=True,
             ),
             # Total de processos urgentes (ativos e prioritários)
             processos_urgentes_count=Count(
-                'processo',
-                filter=Q(processo__status='ativo') & 
-                       Q(processo__prioritario=True)
+                'processos_principais',
+                filter=Q(processos_principais__status='ativo', processos_principais__prioritario=True),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='ativo', processos_associados__prioritario=True),
+                distinct=True,
             ),
             # Total geral de processos (todas as categorias)
-            processos_total_count=Count('processo')
+            processos_total_count=Count('processos_principais', distinct=True)
+            + Count('processos_associados', distinct=True)
         ).order_by('-prioridade', 'id')
         
         # Filtro por contrato
@@ -494,7 +509,7 @@ class ProcessoViewSet(viewsets.ModelViewSet):
         if cliente_id_filter:
             try:
                 cliente_id = int(cliente_id_filter)
-                queryset = queryset.filter(clienteId__id=cliente_id)
+                queryset = queryset.filter(clienteId_id=cliente_id)
             except (ValueError, TypeError):
                 return Response({"error": "ID do cliente deve ser um número inteiro válido"}, status=400)
 
@@ -1164,7 +1179,7 @@ class TarefasViewSet(viewsets.ModelViewSet):
             'advogadoResponsavelId',
             'tipoTarefa',
             'processoOrigemId',  # Inclui processo
-            'processoOrigemId__clienteId'  # NOVO: Inclui cliente através do processo
+            'processoOrigemId'  # processo para carregar os clientes associados
         ).all()
     
     def list(self, request, *args, **kwargs):
@@ -1209,7 +1224,10 @@ class TarefasViewSet(viewsets.ModelViewSet):
                 case 'processoOrigemId':
                     queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
                 case 'clienteNome':  # NOVO: Filtro por nome do cliente
-                    queryset = queryset.filter(processoOrigemId__clienteId__nome__icontains=value)
+                    queryset = queryset.filter(
+                        Q(processoOrigemId__clienteId__nome__icontains=value)
+                        | Q(processoOrigemId__clientesId__nome__icontains=value)
+                    )
         # Se apenas field for fornecido sem value, retorna erro
         elif field and not value:
             return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
@@ -1220,7 +1238,10 @@ class TarefasViewSet(viewsets.ModelViewSet):
         if cliente_id is not None:
             try:
                 cliente_id_int = int(cliente_id)
-                queryset = queryset.filter(processoOrigemId__clienteId__id=cliente_id_int)
+                queryset = queryset.filter(
+                    Q(processoOrigemId__clienteId_id=cliente_id_int)
+                    | Q(processoOrigemId__clientesId__id=cliente_id_int)
+                )
             except ValueError:
                 return Response(
                     {"error": "ID do cliente deve ser um número válido."}, 
@@ -1632,7 +1653,7 @@ class BuscarClienteCamposView(APIView):
 #view para buscar processos por campo específico
 class BuscarProcessoCampoView(APIView):
     permission_classes = [IsAuthenticated]
-    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clienteNome']
+    alowed_field = ['titulo','numeroProcesso','advogadoCriadorId','clienteId','clientesId','clienteNome']
     pagination_class = standardResultsSetPagination
     
     def get(self, request):
@@ -1654,10 +1675,19 @@ class BuscarProcessoCampoView(APIView):
                 queryset = Processo.objects.filter(
                     advogadoCriadorId__nome__icontains=value
                 ).order_by('id')
-            elif field == 'clienteNome':
+            elif field == 'clienteId':
                 queryset = Processo.objects.filter(
                     clienteId__nome__icontains=value
                 ).order_by('id')
+            elif field == 'clientesId':
+                queryset = Processo.objects.filter(
+                    clientesId__nome__icontains=value
+                ).distinct().order_by('id')
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    Q(clienteId__nome__icontains=value)
+                    | Q(clientesId__nome__icontains=value)
+                ).distinct().order_by('id')
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by('id')
             
@@ -1670,6 +1700,15 @@ class BuscarProcessoCampoView(APIView):
                 queryset = Processo.objects.filter(
                     clienteId__nome__icontains=value
                 ).order_by(order_by)
+            elif field == 'clientesId':
+                queryset = Processo.objects.filter(
+                    clientesId__nome__icontains=value
+                ).distinct().order_by(order_by)
+            elif field == 'clienteNome':
+                queryset = Processo.objects.filter(
+                    Q(clienteId__nome__icontains=value)
+                    | Q(clientesId__nome__icontains=value)
+                ).distinct().order_by(order_by)
             else:
                 queryset = Processo.objects.filter(**{f"{field}__contains": value}).order_by(order_by)
         return Response(ProcessoSerializer(queryset, many=True).data)   
@@ -1829,7 +1868,9 @@ def processosClientes(request,cliente_id):
             cliente = get_object_or_404(Cliente, id=cliente_id)
         except:
             return JsonResponse({'error': 'Cliente nao encontrado.'}, status=404)
-        processos = Processo.objects.filter(clienteId=cliente)
+        processos = Processo.objects.filter(
+            Q(clienteId=cliente) | Q(clientesId=cliente)
+        ).distinct()
         serializer = ProcessoSerializer(processos, many=True)
         jsonFile = serializer.data
         return JsonResponse(jsonFile, safe=False)
@@ -1895,7 +1936,9 @@ def processosClientesNome(request, cliente_nome):
         
         # Busca processos dos clientes encontrados
         if clientes.exists():
-            processos_clientes = Processo.objects.filter(clienteId__in=clientes)
+            processos_clientes = Processo.objects.filter(
+                Q(clienteId__in=clientes) | Q(clientesId__in=clientes)
+            ).distinct()
             processos_encontrados.append(processos_clientes)
         
         # Combina processos
@@ -1933,16 +1976,27 @@ def processosClientesNome(request, cliente_nome):
         
         # Adiciona processos (limite 10)
         if processos.exists():
-            for processo in processos.select_related('clienteId')[:10]:
+            for processo in processos.select_related('clienteId').prefetch_related(
+                'clientes_associacoes__cliente'
+            )[:10]:
+                clientes_adicionais = [
+                    associacao.cliente for associacao in processo.clientes_associacoes.all()
+                ]
+                clientes_processo = [processo.clienteId, *clientes_adicionais]
                 cliente = processo.clienteId
                 response_data['processos'].append({
                     'id': processo.id,
                     'numero': processo.numeroProcesso,
                     'titulo': processo.titulo,
                     'status': processo.status,
+                    'clientes': [
+                        {'id': item.id, 'nome': item.nome, 'cpf': item.cpf}
+                        for item in clientes_processo
+                    ],
                     'nomeCliente': cliente.nome if cliente else None,
                     'cpfCliente': cliente.cpf if cliente else None,
-                    'clienteId': cliente.id if cliente else None
+                    'clienteId': cliente.id if cliente else None,
+                    'clientesId': [item.id for item in clientes_adicionais],
                 })
         
         return JsonResponse(response_data)
@@ -2649,8 +2703,29 @@ def advogadosDashboard(request,advogado_id):
     
     
 
-@permission_classes([IsAuthenticated])
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def minha_view(request):
+    token = request.headers.get('Authorization')
+
+    if not token:
+        return Response({'error': 'Token não encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        token_format = token.split(' ')[1]
+        payload = jwt.decode(token_format, settings.SECRET_KEY, algorithms=['HS256'])
+        advogado_id = payload.get('user_id')
+        advogado = Advogado.objects.get(id=advogado_id)
+        serializer = AdvogadoSerializer(advogado)
+        return Response(serializer.data)
+    except IndexError:
+        return Response({'error': 'Formato do token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+    except InvalidTokenError:
+        return Response({'error': 'Token inválido ou expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
+    except Advogado.DoesNotExist:
+        return Response({'error': 'Advogado não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 def advUserInfo(request):
     # A autenticação já é feita pelo CookieJWTAuthentication
     # request.user já está populado com o usuário autenticado
@@ -3041,10 +3116,26 @@ def generic_select_view(request):
                 queryset = queryset.filter(is_active=True)
         
         # Busca
-        search = request.GET.get('search', '')
+        search = request.GET.get('search', '').strip()
         if search:
-            # Tenta buscar por nome ou outros campos
-            if hasattr(model_class, 'nome'):
+            if model_key == 'cliente':
+                cpf_digits = re.sub(r'\D', '', search)
+                client_search = Q(nome__icontains=search) | Q(cpf__icontains=search)
+                if cpf_digits:
+                    queryset = queryset.annotate(
+                        cpf_sem_formatacao=Replace(
+                            Replace(
+                                Replace(F('cpf'), Value('.'), Value('')),
+                                Value('-'),
+                                Value(''),
+                            ),
+                            Value(' '),
+                            Value(''),
+                        )
+                    )
+                    client_search |= Q(cpf_sem_formatacao__icontains=cpf_digits)
+                queryset = queryset.filter(client_search)
+            elif hasattr(model_class, 'nome'):
                 queryset = queryset.filter(nome__icontains=search)
             elif hasattr(model_class, 'name'):
                 queryset = queryset.filter(name__icontains=search)

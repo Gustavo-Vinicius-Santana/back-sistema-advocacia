@@ -1,5 +1,5 @@
-from ...models import Processo
-from django.db.models import Q, Count
+from ...models import Processo, ProcessoCliente
+from django.db.models import Q, Count, OuterRef, Subquery
 from django.utils import timezone
 from datetime import timedelta, date, datetime
 
@@ -7,7 +7,7 @@ from datetime import timedelta, date, datetime
 class ProcessoService:
     # Constantes de validação
     ALLOWED_FILTER_FIELDS = [
-        'numeroProcesso', 'fase', 'status', 'clienteId', 'advogadoCriadorId',
+        'numeroProcesso', 'fase', 'status', 'clienteId', 'clientesId', 'advogadoCriadorId',
         'dataContrato', 'titulo', 'classificacao', 'prioritario', 'concluido',
         'total_tarefas', 'tarefas_em_aberto', 'tarefas_atrasadas',
         'tarefas_concluidas', 'tarefas_urgentes', 'tarefas_perto_prazo'
@@ -16,6 +16,7 @@ class ProcessoService:
     ALLOWED_ORDER_FIELDS = [
         'id', 'numeroProcesso', 'titulo', 'dataContrato', 'prioritario','-prioritario',
         'clienteId__nome', '-clienteId__nome',
+        'clientesId__nome', '-clientesId__nome',
         'advogadoCriadorId__nome', '-advogadoCriadorId__nome',
         'fase', '-fase', 'fase__nome', '-fase__nome',
         'status', '-status',
@@ -39,38 +40,61 @@ class ProcessoService:
         Encapsula a lógica de annotate que estava no get_queryset da view.
         """
         return Processo.objects.annotate(
-            total_tarefas=Count('tarefas', filter=Q(tarefas__deletada=False)),
+            total_tarefas=Count('tarefas', filter=Q(tarefas__deletada=False), distinct=True),
             tarefas_em_aberto=Count(
                 'tarefas',
+                distinct=True,
                 filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='em aberto')
             ),
             tarefas_atrasadas=Count(
                 'tarefas',
+                distinct=True,
                 filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='atrasada')
             ),
             tarefas_concluidas=Count(
                 'tarefas',
+                distinct=True,
                 filter=Q(tarefas__deletada=False, tarefas__concluida=True)
             ),
             tarefas_urgentes=Count(
                 'tarefas',
+                distinct=True,
                 filter=Q(tarefas__deletada=False, tarefas__urgente=True, tarefas__concluida=False)
             ),
             tarefas_perto_prazo=Count(
                 'tarefas',
+                distinct=True,
                 filter=Q(tarefas__deletada=False, tarefas__concluida=False, tarefas__status='perto do prazo')
             )
-        )
+        ).select_related('clienteId').prefetch_related('clientes_associacoes__cliente')
 
     def filtrar_por_cliente_id(self, queryset, cliente_id_filter):
-        """Filtra processos por ID do cliente"""
+        """Filtra por qualquer cliente vinculado ao processo."""
         if cliente_id_filter:
             try:
                 cliente_id = int(cliente_id_filter)
-                return queryset.filter(clienteId__id=cliente_id)
+                return queryset.filter(
+                    Q(clienteId_id=cliente_id) | Q(clientesId__id=cliente_id)
+                ).distinct()
             except (ValueError, TypeError):
                 raise ValueError("ID do cliente deve ser um número inteiro válido")
         return queryset
+
+    def filtrar_por_clientes_ids(self, queryset, clientes_ids):
+        """Filtra pelo novo parâmetro com IDs de qualquer cliente associado."""
+        if not clientes_ids:
+            return queryset
+        if isinstance(clientes_ids, str):
+            raw_ids = [item.strip() for item in clientes_ids.split(',') if item.strip()]
+        else:
+            raw_ids = clientes_ids
+        try:
+            ids = [int(cliente_id) for cliente_id in raw_ids]
+        except (ValueError, TypeError):
+            raise ValueError("clientes_ids deve conter IDs numéricos válidos")
+        return queryset.filter(
+            Q(clienteId_id__in=ids) | Q(clientesId__id__in=ids)
+        ).distinct()
 
     def filtrar_por_status(self, queryset, status_filter):
         """Filtra processos por status"""
@@ -113,6 +137,9 @@ class ProcessoService:
         # Campos de relacionamento
         elif field == 'clienteId':
             return queryset.filter(clienteId__nome__icontains=value)
+
+        elif field == 'clientesId':
+            return queryset.filter(clientesId__nome__icontains=value).distinct()
 
         elif field == 'advogadoCriadorId':
             return queryset.filter(advogadoCriadorId__nome__icontains=value)
@@ -224,10 +251,24 @@ class ProcessoService:
         if order_by not in self.ALLOWED_ORDER_FIELDS:
             raise ValueError(f"Campo de ordenação inválido: {order_by}")
 
+        if order_by in ('clienteId__nome', '-clienteId__nome'):
+            return queryset.order_by(order_by)
+
+        if order_by in ('clientesId__nome', '-clientesId__nome'):
+            nome_cliente = Subquery(
+                ProcessoCliente.objects.filter(
+                    processo_id=OuterRef('pk'),
+                ).order_by('ordem', 'id').values('cliente__nome')[:1]
+            )
+            queryset = queryset.annotate(_nome_cliente_ordenacao=nome_cliente)
+            return queryset.order_by(
+                '-_nome_cliente_ordenacao' if order_by.startswith('-') else '_nome_cliente_ordenacao'
+            )
+
         return queryset.order_by(order_by)
 
-    def filtrar_e_ordenar_completos(self, cliente_id=None, status=None, concluido=None,
-                                   field=None, value=None, periodo=None,
+    def filtrar_e_ordenar_completos(self, cliente_id=None, clientes_ids=None,
+                                   status=None, concluido=None, field=None, value=None, periodo=None,
                                    data_inicio=None, data_fim=None, order_by=None):
         """
         Método principal que aplica todos os filtros e ordenação.
@@ -238,6 +279,7 @@ class ProcessoService:
         # Aplicar filtros em sequência
         try:
             queryset = self.filtrar_por_cliente_id(queryset, cliente_id)
+            queryset = self.filtrar_por_clientes_ids(queryset, clientes_ids)
             queryset = self.filtrar_por_status(queryset, status)
             queryset = self.filtrar_por_concluido(queryset, concluido)
 
@@ -249,7 +291,7 @@ class ProcessoService:
             elif data_inicio or data_fim:
                 queryset = self.filtrar_por_intervalo_data(queryset, data_inicio, data_fim)
 
-            queryset = self.aplicar_ordenacao(queryset, order_by)
+            queryset = self.aplicar_ordenacao(queryset, order_by).distinct()
 
         except ValueError as e:
             raise ValueError(str(e))

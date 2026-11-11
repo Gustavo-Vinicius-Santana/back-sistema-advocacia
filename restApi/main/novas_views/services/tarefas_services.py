@@ -41,8 +41,10 @@ class TarefasServices:
             'advogadoCriadorId',
             'advogadoResponsavelId',
             'tipoTarefa',
-            'processoOrigemId',  # Inclui processo
-            'processoOrigemId__clienteId'  # NOVO: Inclui cliente através do processo
+            'processoOrigemId',
+            'processoOrigemId__clienteId',
+        ).prefetch_related(
+            'processoOrigemId__clientes_associacoes__cliente'
         ).all()
         
     def list_services(self, request,queryset)->Tarefas:
@@ -85,7 +87,10 @@ class TarefasServices:
                 case 'processoOrigemId':
                     queryset = queryset.filter(processoOrigemId__numeroProcesso__icontains=value)
                 case 'clienteNome':  # NOVO: Filtro por nome do cliente
-                    queryset = queryset.filter(processoOrigemId__clienteId__nome__icontains=value)
+                    queryset = queryset.filter(
+                        Q(processoOrigemId__clienteId__nome__icontains=value)
+                        | Q(processoOrigemId__clientesId__nome__icontains=value)
+                    )
         # Se apenas field for fornecido sem value, retorna erro
         elif field and not value:
             return Response({"error": "Parâmetro 'value' é obrigatório quando 'field' é fornecido."}, status=400)
@@ -96,13 +101,18 @@ class TarefasServices:
         if cliente_id is not None:
             try:
                 cliente_id_int = int(cliente_id)
-                queryset = queryset.filter(processoOrigemId__clienteId__id=cliente_id_int)
+                queryset = queryset.filter(
+                    Q(processoOrigemId__clienteId_id=cliente_id_int)
+                    | Q(processoOrigemId__clientesId__id=cliente_id_int)
+                )
             except ValueError:
                 return Response(
                     {"error": "ID do cliente deve ser um número válido."}, 
                     status=400
                 )
         
+        queryset = queryset.distinct()
+
         # Filtro por ID do advogado responsável
         if advogado_responsavel_id is not None:
             try:

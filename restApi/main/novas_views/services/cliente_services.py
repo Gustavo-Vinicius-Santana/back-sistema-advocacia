@@ -30,19 +30,34 @@ class ClienteService:
                 output_field=IntegerField()
             ),
             processos_ativos_count=Count(
-                'processo',
-                filter=Q(processo__status='ativo')
+                'processos_principais',
+                filter=Q(processos_principais__status='ativo'),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='ativo'),
+                distinct=True,
             ),
             processos_arquivados_count=Count(
-                'processo',
-                filter=Q(processo__status='arquivado')
+                'processos_principais',
+                filter=Q(processos_principais__status='arquivado'),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='arquivado'),
+                distinct=True,
             ),
             processos_urgentes_count=Count(
-                'processo',
-                filter=Q(processo__status='ativo') & 
-                       Q(processo__prioritario=True)
+                'processos_principais',
+                filter=Q(processos_principais__status='ativo', processos_principais__prioritario=True),
+                distinct=True,
+            ) + Count(
+                'processos_associados',
+                filter=Q(processos_associados__status='ativo', processos_associados__prioritario=True),
+                distinct=True,
             ),
-            processos_total_count=Count('processo')
+            processos_total_count=Count('processos_principais', distinct=True)
+            + Count('processos_associados', distinct=True),
         ).order_by('-prioridade', 'id')
     
     def filtrar_e_ordenar(self, field=None, value=None, order_by=None, contrato=None):
