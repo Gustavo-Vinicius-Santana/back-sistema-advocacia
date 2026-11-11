@@ -1,3 +1,7 @@
 .env
 __pycache__/
 *.py[cod]
+
+# As migrations definem o schema do banco e precisam ser versionadas.
+!main/migrations/
+!main/migrations/*.py

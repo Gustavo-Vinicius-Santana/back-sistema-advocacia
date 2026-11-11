@@ -71,10 +71,10 @@ class AdvogadoUserInfoView(APIView):
             advogado = request.user
             serializer = AdvogadoSerializer(advogado)
             serializer_formatado = dict(serializer.data)
-            if advogado.is_staff:
-                serializer_formatado['role'] = 'staff'
-            elif advogado.is_superuser:
+            if advogado.is_superuser:
                 serializer_formatado['role'] = 'admin'
+            elif advogado.is_staff:
+                serializer_formatado['role'] = 'staff'
             else:
                 serializer_formatado['role'] = 'advogado'
             return Response(serializer_formatado)
@@ -91,15 +91,8 @@ class AdvogadoRegisterView(APIView):
 
     def post(self, request):
         service = AdvogadoService()
+        data = request.data
 
-        # Obter dados do request
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse(
-                {"error": "JSON inválido."},
-                status=400
-            )
         
         # Registrar advogado via service
         try:
@@ -108,7 +101,7 @@ class AdvogadoRegisterView(APIView):
                 email=data.get('email'),
                 telefone=data.get('telefone'),
                 oab=data.get('oab'),
-                foto=data.get('foto'),
+                foto=request.FILES.get('foto') or data.get('foto'),
                 is_staff=data.get('is_staff', False),
                 password=data.get('password')
             )
@@ -206,6 +199,7 @@ class AdvogadoLogoutView(APIView):
                 pass
 
         response = Response({"detail": "Logout realizado com sucesso."})
+        # Deletar cookies - o método delete_cookie do Django não aceita parâmetros como secure/samesite
         response.delete_cookie('access_token', path='/')
         response.delete_cookie('refresh_token', path='/')
         return response
@@ -244,19 +238,3 @@ class AdvogadosDashboardView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-class AdvogadoUserInfoView(APIView):
-    """Retorna informações do usuário autenticado"""
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request, *args, **kwargs):
-        serializer = AdvogadoSerializer(request.user)
-        serializer_formatado = dict(serializer.data)
-        if request.user.is_staff:
-            serializer_formatado['role'] = 'staff'
-        elif request.user.is_superuser:
-            serializer_formatado['role'] = 'admin'
-        else:
-            serializer_formatado['role'] = 'advogado'
-        return Response(serializer_formatado)

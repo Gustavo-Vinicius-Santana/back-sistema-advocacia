@@ -16,17 +16,29 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - JWT_COOKIE_SECURE=${JWT_COOKIE_SECURE:-false}
       - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
+
+      # Superusuário
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
+      - DJANGO_SUPERUSER_NOME=${DJANGO_SUPERUSER_NOME:-}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
+      - DJANGO_SUPERUSER_TELEFONE=${DJANGO_SUPERUSER_TELEFONE:-}
+
       - POSTGRES_DB=${POSTGRES_DB:-restapi}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+
     ports:
       - "8000:8000"
+
     volumes:
       - ./:/app
+
     depends_on:
       db:
         condition: service_healthy
+
     command: sh -c "python manage.py migrate && gunicorn restApi.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile -"
+
     networks:
       - dev-network
 
