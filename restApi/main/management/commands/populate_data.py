@@ -13,6 +13,14 @@ from main.models import (
 fake = Faker("pt_BR")
 
 
+def random_datetime(days_back_max=60, days_forward_max=30):
+    """Retorna um datetime aleatório entre `days_back_max` dias atrás e `days_forward_max` no futuro."""
+    now = timezone.now()
+    delta_days = random.randint(-days_back_max, days_forward_max)
+    delta_seconds = random.randint(0, 86399)
+    return now + timezone.timedelta(days=delta_days, seconds=delta_seconds)
+
+
 class Command(BaseCommand):
     help = "Popula o banco de dados com dados fictícios para desenvolvimento"
 
@@ -23,7 +31,7 @@ class Command(BaseCommand):
         # 1. PARCEIROS
         # -----------------------------------------
         parceiros = []
-        for _ in range(3):
+        for _ in range(5):
             parceiro = Parceiros.objects.create(
                 nome=fake.company(),
                 email=fake.email(),
@@ -45,10 +53,10 @@ class Command(BaseCommand):
         # 2. ADVOGADOS
         # -----------------------------------------
         advogados = []
-        for _ in range(4):
+        for _ in range(5):
             advogado = Advogado.objects.create_user(
                 email=fake.email(),
-                password="123456",
+                password="123456789012",
                 nome=fake.name(),
                 telefone=fake.phone_number(),
                 oab=str(fake.random_int(10000, 99999)),
@@ -62,9 +70,10 @@ class Command(BaseCommand):
         # 3. CLIENTES
         # -----------------------------------------
         clientes = []
-        for _ in range(10):
+        for _ in range(20):
             cliente = Cliente.objects.create(
                 nome=fake.name(),
+                dataCadastro=random_datetime(days_back_max=60, days_forward_max=0),
                 cpf=fake.cpf(),
                 telefone=fake.phone_number(),
                 dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
@@ -80,10 +89,11 @@ class Command(BaseCommand):
                 observacoes="Cliente de teste.",
                 parceiro=random.choice(parceiros),
                 contactado=fake.boolean(),
-                contrato=True
+                contrato=fake.boolean(chance_of_getting_true=70)
             )
             clienteMesmoNome = Cliente.objects.create(
                 nome="Gustavo",
+                dataCadastro=random_datetime(days_back_max=60, days_forward_max=0),
                 cpf=fake.cpf(),
                 telefone=fake.phone_number(),
                 dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
@@ -99,7 +109,7 @@ class Command(BaseCommand):
                 observacoes="Cliente de teste.",
                 parceiro=random.choice(parceiros),
                 contactado=fake.boolean(),
-                contrato=True
+                contrato=fake.boolean(chance_of_getting_true=70)
             )
             clientes.append(cliente)
             clientes.append(clienteMesmoNome)
@@ -194,19 +204,22 @@ class Command(BaseCommand):
         # -----------------------------------------
         processos = []
         for cliente in clientes:
-            processo = Processo.objects.create(
-                numeroProcesso=str(fake.random_int(100000, 999999)),
-                clienteId=cliente,
-                advogadoCriadorId=random.choice(advogados),
-                grupoAcao=random.choice(grupos),
-                tipoAcao=random.choice(tipos),
-                fase=random.choice(fases),
-                etapa=random.choice(etapas),
-                dataContrato=timezone.now(),
-                observacoes="Processo criado automaticamente.",  # CAMPO ADICIONADO DE VOLTA
-                prioritario=fake.boolean()
-            )
-            processos.append(processo)
+            for _ in range(random.randint(1, 3)):
+                data_criacao = random_datetime(days_back_max=60, days_forward_max=5)
+                processo = Processo.objects.create(
+                    numeroProcesso=str(fake.random_int(100000, 999999)),
+                    clienteId=cliente,
+                    advogadoCriadorId=random.choice(advogados),
+                    grupoAcao=random.choice(grupos),
+                    tipoAcao=random.choice(tipos),
+                    fase=random.choice(fases),
+                    etapa=random.choice(etapas),
+                    dataContrato=data_criacao,
+                    dataCriacao=data_criacao,
+                    observacoes="Processo criado automaticamente.",
+                    prioritario=fake.boolean()
+                )
+                processos.append(processo)
 
         self.stdout.write(self.style.SUCCESS("✔ Processos criados"))
 
@@ -219,17 +232,30 @@ class Command(BaseCommand):
             tipos_tarefa.append(TipoTarefa.objects.create(nome=nome))
 
         for processo in processos:
-            for _ in range(2):
+            for _ in range(random.randint(1, 3)):
+                concluida = fake.boolean(chance_of_getting_true=60)
+                data_inicio = random_datetime(days_back_max=45, days_forward_max=0)
+                data_conclusao = None
+                if concluida:
+                    # Concluída entre 1 e 10 dias após a criação, sem passar de hoje
+                    limite = min(data_inicio + timezone.timedelta(days=10), timezone.now())
+                    data_conclusao = data_inicio + timezone.timedelta(
+                        seconds=random.randint(0, max(0, int((limite - data_inicio).total_seconds())))
+                    )
+
                 tarefa = Tarefas.objects.create(
                     advogadoCriadorId=random.choice(advogados),
                     advogadoResponsavelId=random.choice(advogados),
                     processoOrigemId=processo,
                     tipoTarefa=random.choice(tipos_tarefa),
-                    prazoFinal=timezone.now() + timezone.timedelta(days=fake.random_int(1, 30)),
+                    prazoFinal=data_inicio + timezone.timedelta(days=fake.random_int(1, 30)),
                     urgente=fake.boolean(),
-                    concluida=fake.boolean(),
+                    concluida=concluida,
+                    dataConclusao=data_conclusao,
                     deletada=False,
                 )
+                # dataInicio é auto_now_add: ajusta via update para espalhar no tempo
+                Tarefas.objects.filter(pk=tarefa.pk).update(dataInicio=data_inicio)
 
                 HistoricoTarefas.objects.create(
                     tarefaId=tarefa,

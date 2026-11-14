@@ -1,8 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
+from django.utils import timezone
 
 class Cliente(models.Model):
     nome = models.CharField(max_length=255)
+    dataCadastro = models.DateTimeField(default=timezone.now)
     cpf = models.CharField(max_length=20, unique=True)
     telefone = models.CharField(max_length=20)
     dataNascimento = models.DateField()
@@ -198,6 +200,7 @@ class Processo(models.Model):
     fase = models.ForeignKey('FaseProcesso', on_delete=models.PROTECT)
     etapa = models.ForeignKey('EtapaProcesso', on_delete=models.PROTECT, blank=True)
     dataContrato = models.DateTimeField(default='2000-01-01 00:00:00')
+    dataCriacao = models.DateTimeField(default=timezone.now)
     CLASSIFICACAO_CHOICES = [('ruim','Ruim'),('regular','Regular'),('bom','Bom'),('excelente','Excelente')]
     classificacao = models.CharField(max_length=50, choices=CLASSIFICACAO_CHOICES, default='regular')
     observacoes = models.TextField(blank=True)
@@ -256,6 +259,7 @@ class Tarefas(models.Model):
     arquivo = models.TextField(null=True,blank=True)
     #deletadas = models.BooleanField(default=False,blank=True)
     concluida = models.BooleanField(default=False,blank=True) # UM FRILTRO
+    dataConclusao = models.DateTimeField(null=True, blank=True)
     deletada = models.BooleanField(default=False) # UM FILTRO
     deletadaPor = models.CharField(max_length=255, default="Ninguem", blank=True)
     STATUS_CHOICES = [('em aberto','Em aberto'),('atrasada','Atrasada'),('perto do prazo','Perto do prazo')]

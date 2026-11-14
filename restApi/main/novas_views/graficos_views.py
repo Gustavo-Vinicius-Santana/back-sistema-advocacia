@@ -81,3 +81,25 @@ class GraficosTarefasAdvogadoView(APIView):
         service = GraficoService()
         jsonFile = service.obter_grafico_tarefas_advogado()
         return JsonResponse(jsonFile, safe=False)
+
+
+class GraficoSerieTemporalView(APIView):
+    permission_classes = [IsAuthenticated]
+    METRICAS_VALIDAS = ('clientes', 'processos', 'tarefas')
+    DIAS_VALIDOS = (7, 30)
+
+    def get(self, request, format=None):
+        metrica = request.query_params.get('metrica', 'tarefas')
+        if metrica not in self.METRICAS_VALIDAS:
+            return JsonResponse({'error': 'Metrica invalida.'}, status=400)
+
+        try:
+            dias = int(request.query_params.get('dias', 30))
+        except (TypeError, ValueError):
+            dias = 30
+        if dias not in self.DIAS_VALIDOS:
+            dias = 30
+
+        service = GraficoService()
+        json_file = service.obter_serie_temporal(metrica, dias)
+        return JsonResponse(json_file, safe=False)

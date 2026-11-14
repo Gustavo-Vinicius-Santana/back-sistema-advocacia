@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
+from django.utils import timezone
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import *
 class ClienteSerializer(serializers.ModelSerializer):
@@ -376,6 +377,13 @@ class TarefasSerializer(serializers.ModelSerializer):
             .values_list('cliente__nome', flat=True)
         )
 
+    def update(self, instance, validated_data):
+        concluida = validated_data.get('concluida')
+        if concluida is True and not instance.concluida:
+            validated_data['dataConclusao'] = timezone.now()
+        elif concluida is False and instance.concluida:
+            validated_data['dataConclusao'] = None
+        return super().update(instance, validated_data)
 
 class TipoTarefaSerializer(serializers.ModelSerializer):
     # Campos calculados que serão populados via annotate

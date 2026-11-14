@@ -49,6 +49,7 @@ urlpatterns = [
     path('graficos/clientes/parceiro/', graficos_views.GraficoClientesParceirosView.as_view(), name='graficoClientesParceiro'),
     path('graficos/tarefas/status/', graficos_views.GraficoTarefasStatusView.as_view(), name='graficoTarefasStatus'),
     path('graficos/tarefas/advogados/', graficos_views.GraficosTarefasAdvogadoView.as_view(), name='graficoTarefasAdvogados'),
+    path('graficos/serie-temporal/', graficos_views.GraficoSerieTemporalView.as_view(), name='graficoSerieTemporal'),
     
     path('cliente/<int:cliente_id>/representante/', data_field_views.BuscarRepresentantesPorClienteView.as_view(), name='representante-por-cliente'),
     
