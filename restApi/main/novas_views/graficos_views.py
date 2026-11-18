@@ -85,7 +85,18 @@ class GraficosTarefasAdvogadoView(APIView):
 
 class GraficoSerieTemporalView(APIView):
     permission_classes = [IsAuthenticated]
-    METRICAS_VALIDAS = ('clientes', 'processos', 'tarefas')
+    METRICAS_VALIDAS = (
+        'clientes',
+        'processos',
+        'tarefas',
+        'processos_ativos',
+        'processos_arquivados',
+        'processos_peticionar',
+        'processos_protocolar',
+        'processos_classificacao',
+        'processos_grupo',
+        'processos_fase',
+    )
     DIAS_VALIDOS = (7, 30, 90, 180, 365)
 
     def get(self, request, format=None):
@@ -101,5 +112,7 @@ class GraficoSerieTemporalView(APIView):
             dias = 30
 
         service = GraficoService()
-        json_file = service.obter_serie_temporal(metrica, dias)
+        json_file = service.obter_serie_temporal(
+            metrica, dias, request.query_params.get('valor')
+        )
         return JsonResponse(json_file, safe=False)

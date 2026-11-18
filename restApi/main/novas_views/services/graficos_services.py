@@ -161,13 +161,28 @@ class GraficoService:
             })
         return jsonFile
 
+    # metrica -> (model, campo_data, filtros extras)
     METRICAS_SERIE_TEMPORAL = {
-        'clientes': (Cliente, 'dataCadastro'),
-        'processos': (Processo, 'dataCriacao'),
-        'tarefas': (Tarefas, 'dataInicio'),
+        'clientes': (Cliente, 'dataCadastro', {}),
+        'processos': (Processo, 'dataCriacao', {}),
+        'tarefas': (Tarefas, 'dataInicio', {'deletada': False}),
+        'processos_ativos': (Processo, 'dataCriacao', {'status': 'ativo'}),
+        'processos_arquivados': (Processo, 'dataCriacao', {'status': 'arquivado'}),
+        'processos_peticionar': (Processo, 'dataCriacao', {'tipoAcao__nome__iexact': 'peticionar'}),
+        'processos_protocolar': (Processo, 'dataCriacao', {'tipoAcao__nome__iexact': 'protocolar'}),
+        'processos_classificacao': (Processo, 'dataCriacao', {}),
+        'processos_grupo': (Processo, 'dataCriacao', {}),
+        'processos_fase': (Processo, 'dataCriacao', {}),
     }
 
-    def obter_serie_temporal(self, metrica: str, dias: int) -> list:
+    # metrica -> lookup ORM aplicado com o parâmetro `valor`
+    CAMPOS_FILTRO_VALOR = {
+        'processos_classificacao': 'classificacao',
+        'processos_grupo': 'grupoAcao__nome__iexact',
+        'processos_fase': 'fase__nome__iexact',
+    }
+
+    def obter_serie_temporal(self, metrica: str, dias: int, valor: str = None) -> list:
         """
         Retorna a quantidade de registros criados por dia nos últimos `dias` dias.
         Para períodos longos (acima de 2 meses), agrupa por mês.
@@ -177,7 +192,11 @@ class GraficoService:
         if metrica not in self.METRICAS_SERIE_TEMPORAL:
             return []
 
-        model, campo_data = self.METRICAS_SERIE_TEMPORAL[metrica]
+        model, campo_data, filtros_base = self.METRICAS_SERIE_TEMPORAL[metrica]
+        filtros_extra = dict(filtros_base)
+        campo_valor = self.CAMPOS_FILTRO_VALOR.get(metrica)
+        if campo_valor and valor:
+            filtros_extra[campo_valor] = valor
         hoje = timezone.localdate()
         inicio = hoje - timedelta(days=dias - 1)
         mensal = dias > 62
@@ -197,9 +216,10 @@ class GraficoService:
             periodo = [inicio + timedelta(days=i) for i in range(dias)]
             trunc = TruncDate
 
-        filtros = {f'{campo_data}__date__gte': inicio}
-        if metrica == 'tarefas':
-            filtros['deletada'] = False
+        filtros = {
+            f'{campo_data}__date__gte': inicio,
+            **filtros_extra,
+        }
 
         contagens = {
             (k.date() if isinstance(k, datetime) else k): v
