@@ -86,7 +86,7 @@ class GraficosTarefasAdvogadoView(APIView):
 class GraficoSerieTemporalView(APIView):
     permission_classes = [IsAuthenticated]
     METRICAS_VALIDAS = ('clientes', 'processos', 'tarefas')
-    DIAS_VALIDOS = (7, 30)
+    DIAS_VALIDOS = (7, 30, 90, 180, 365)
 
     def get(self, request, format=None):
         metrica = request.query_params.get('metrica', 'tarefas')

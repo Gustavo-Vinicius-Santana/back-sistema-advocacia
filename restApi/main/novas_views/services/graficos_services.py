@@ -1,8 +1,8 @@
 from ...models import Processo,GrupoAcao,FaseProcesso,Cliente,Tarefas,Advogado
 from django.db.models import Count
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 
 class GraficoService:
     """
@@ -170,8 +170,9 @@ class GraficoService:
     def obter_serie_temporal(self, metrica: str, dias: int) -> list:
         """
         Retorna a quantidade de registros criados por dia nos últimos `dias` dias.
+        Para períodos longos (acima de 2 meses), agrupa por mês.
         Formato: [{ "data": "YYYY-MM-DD", "quantidade": int }, ...]
-        Para metrica='tarefas', inclui também "concluidas" por dia.
+        Para metrica='tarefas', inclui também "concluidas" por dia/mês.
         """
         if metrica not in self.METRICAS_SERIE_TEMPORAL:
             return []
@@ -179,38 +180,59 @@ class GraficoService:
         model, campo_data = self.METRICAS_SERIE_TEMPORAL[metrica]
         hoje = timezone.localdate()
         inicio = hoje - timedelta(days=dias - 1)
-        dias_range = [inicio + timedelta(days=i) for i in range(dias)]
+        mensal = dias > 62
+
+        if mensal:
+            # Um ponto por mês, a partir do mês de `inicio` até o mês atual
+            periodo = []
+            ano, mes = inicio.year, inicio.month
+            while date(ano, mes, 1) <= hoje:
+                periodo.append(date(ano, mes, 1))
+                mes += 1
+                if mes == 13:
+                    mes = 1
+                    ano += 1
+            trunc = TruncMonth
+        else:
+            periodo = [inicio + timedelta(days=i) for i in range(dias)]
+            trunc = TruncDate
 
         filtros = {f'{campo_data}__date__gte': inicio}
         if metrica == 'tarefas':
             filtros['deletada'] = False
 
-        contagens = dict(
-            model.objects
+        contagens = {
+            (k.date() if isinstance(k, datetime) else k): v
+            for k, v in model.objects
             .filter(**filtros)
-            .annotate(dia=TruncDate(campo_data))
+            .annotate(dia=trunc(campo_data))
             .values('dia')
             .annotate(total=Count('id'))
             .values_list('dia', 'total')
-        )
+        }
 
         resultado = [
             {
                 "data": dia.isoformat(),
                 "quantidade": contagens.get(dia, 0),
             }
-            for dia in dias_range
+            for dia in periodo
         ]
 
         if metrica == 'tarefas':
-            contagens_concluidas = dict(
-                Tarefas.objects
-                .filter(deletada=False, dataConclusao__date__gte=inicio)
-                .annotate(dia=TruncDate('dataConclusao'))
+            filtros_conclusao = {
+                'deletada': False,
+                'dataConclusao__date__gte': inicio,
+            }
+            contagens_concluidas = {
+                (k.date() if isinstance(k, datetime) else k): v
+                for k, v in Tarefas.objects
+                .filter(**filtros_conclusao)
+                .annotate(dia=trunc('dataConclusao'))
                 .values('dia')
                 .annotate(total=Count('id'))
                 .values_list('dia', 'total')
-            )
+            }
             for item in resultado:
                 dia = date.fromisoformat(item['data'])
                 item['concluidas'] = contagens_concluidas.get(dia, 0)
