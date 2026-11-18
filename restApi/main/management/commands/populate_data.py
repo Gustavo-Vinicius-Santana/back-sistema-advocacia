@@ -70,10 +70,10 @@ class Command(BaseCommand):
         # 3. CLIENTES
         # -----------------------------------------
         clientes = []
-        for _ in range(20):
+        for _ in range(30):
             cliente = Cliente.objects.create(
                 nome=fake.name(),
-                dataCadastro=random_datetime(days_back_max=60, days_forward_max=0),
+                dataCadastro=random_datetime(days_back_max=365, days_forward_max=0),
                 cpf=fake.cpf(),
                 telefone=fake.phone_number(),
                 dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
@@ -93,7 +93,7 @@ class Command(BaseCommand):
             )
             clienteMesmoNome = Cliente.objects.create(
                 nome="Gustavo",
-                dataCadastro=random_datetime(days_back_max=60, days_forward_max=0),
+                dataCadastro=random_datetime(days_back_max=365, days_forward_max=0),
                 cpf=fake.cpf(),
                 telefone=fake.phone_number(),
                 dataNascimento=fake.date_of_birth(minimum_age=18, maximum_age=80),
@@ -179,21 +179,21 @@ class Command(BaseCommand):
         # 7. GRUPO, TIPO, FASE, ETAPA
         # -----------------------------------------
         grupos = []
-        for nome in ["Previdenciário", "Trabalhista", "Cível"]:
+        for nome in ["Previdenciário", "Trabalhista", "Cível", "Consumidor", "Empresarial"]:
             grupos.append(GrupoAcao.objects.create(nome=nome))
 
         tipos = []
         for grupo in grupos:
-            for nome in ["Inicial", "Recurso", "Revisão"]:
+            for nome in ["Inicial", "Recurso", "Revisão", "Petição", "Cumprimento", "Peticionar", "Protocolar"]:
                 tipos.append(TipoAcao.objects.create(nome=nome, grupoAcao=grupo))
 
         fases = []
-        for nome in ["Distribuição", "Audiência", "Sentença"]:
+        for nome in ["Distribuição", "Audiência", "Sentença", "Cumprimento"]:
             fases.append(FaseProcesso.objects.create(nome=nome))
 
         etapas = []
         for fase in fases:
-            for nome in ["Início", "Andamento", "Conclusão"]:
+            for nome in ["Início", "Andamento", "Conclusão", "Pendência"]:
                 etapas.append(EtapaProcesso.objects.create(nome=nome, faseProcesso=fase))
 
         self.stdout.write(self.style.SUCCESS("✔ Grupo/Tipos/Fases/Etapas criados"))
@@ -203,19 +203,43 @@ class Command(BaseCommand):
         # 8. PROCESSOS (CORRIGIDO - AGORA COM OBSERVACOES)
         # -----------------------------------------
         processos = []
+        etapas_por_fase = {}
+        for etapa in etapas:
+            etapas_por_fase.setdefault(etapa.faseProcesso_id, []).append(etapa)
+
+        tipos_peticionar = [t for t in tipos if t.nome.lower() == "peticionar"]
+        tipos_protocolar = [t for t in tipos if t.nome.lower() == "protocolar"]
+
         for cliente in clientes:
             for _ in range(random.randint(1, 3)):
-                data_criacao = random_datetime(days_back_max=60, days_forward_max=5)
+                data_criacao = random_datetime(days_back_max=365, days_forward_max=5)
+                fase_escolhida = random.choice(fases)
+                arquivado = random.random() < 0.2
+
+                sorteio_tipo = random.random()
+                if sorteio_tipo < 0.15:
+                    tipo_acao = random.choice(tipos_peticionar)
+                elif sorteio_tipo < 0.30:
+                    tipo_acao = random.choice(tipos_protocolar)
+                else:
+                    tipo_acao = random.choice(tipos)
+
                 processo = Processo.objects.create(
                     numeroProcesso=str(fake.random_int(100000, 999999)),
                     clienteId=cliente,
                     advogadoCriadorId=random.choice(advogados),
-                    grupoAcao=random.choice(grupos),
-                    tipoAcao=random.choice(tipos),
-                    fase=random.choice(fases),
-                    etapa=random.choice(etapas),
+                    grupoAcao=tipo_acao.grupoAcao,
+                    tipoAcao=tipo_acao,
+                    fase=fase_escolhida,
+                    etapa=random.choice(etapas_por_fase[fase_escolhida.id]),
                     dataContrato=data_criacao,
                     dataCriacao=data_criacao,
+                    status="arquivado" if arquivado else "ativo",
+                    classificacao=random.choices(
+                        ["ruim", "regular", "bom", "excelente"],
+                        weights=[15, 40, 30, 15],
+                    )[0],
+                    concluido=arquivado or random.random() < 0.1,
                     observacoes="Processo criado automaticamente.",
                     prioritario=fake.boolean()
                 )
@@ -234,7 +258,7 @@ class Command(BaseCommand):
         for processo in processos:
             for _ in range(random.randint(1, 3)):
                 concluida = fake.boolean(chance_of_getting_true=60)
-                data_inicio = random_datetime(days_back_max=45, days_forward_max=0)
+                data_inicio = random_datetime(days_back_max=365, days_forward_max=0)
                 data_conclusao = None
                 if concluida:
                     # Concluída entre 1 e 10 dias após a criação, sem passar de hoje
