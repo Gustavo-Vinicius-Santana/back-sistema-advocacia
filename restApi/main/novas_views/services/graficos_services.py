@@ -120,10 +120,11 @@ class GraficoService:
         return json_file
     
     def obter_grafico_clientes_parceiros(self)->list:
-        parceiros = Cliente.objects.values('parceiro__nome').annotate(quantidade=Count('id')).order_by('parceiro__nome')
+        parceiros = Cliente.objects.values('parceiro__id', 'parceiro__nome').annotate(quantidade=Count('id')).order_by('parceiro__nome')
 
         json_file = [
             {
+                "parceiroId": parceiro['parceiro__id'],
                 "parceiro": parceiro['parceiro__nome'],
                 "quantidade": parceiro['quantidade']
             }
@@ -154,6 +155,7 @@ class GraficoService:
             criadas = Tarefas.objects.filter(advogadoCriadorId=advogado.id,deletada=False).count()
             atribuidas = Tarefas.objects.filter(advogadoResponsavelId=advogado.id,deletada=False).count()
             jsonFile.append({
+                "advogadoId": advogado.id,
                 "advogado": advogado.nome,
                 "quantidade": atribuidas,
                 "tarefasCriadas": criadas,
@@ -182,12 +184,15 @@ class GraficoService:
         'processos_fase': 'fase__nome__iexact',
     }
 
-    def obter_serie_temporal(self, metrica: str, dias: int, valor: str = None) -> list:
+    def obter_serie_temporal(self, metrica: str, dias: int, valor: str = None, advogado_id=None, tarefa_tipo: str = None, parceiro=None, contrato=None) -> list:
         """
         Retorna a quantidade de registros criados por dia nos últimos `dias` dias.
         Para períodos longos (acima de 2 meses), agrupa por mês.
         Formato: [{ "data": "YYYY-MM-DD", "quantidade": int }, ...]
         Para metrica='tarefas', inclui também "concluidas" por dia/mês.
+        Com advogado_id e tarefa_tipo='criadas', conta tarefas criadas pelo
+        advogado (advogadoCriadorId) por dataInicio; com 'concluidas', conta
+        tarefas concluídas para o advogado (advogadoResponsavelId) por dataConclusao.
         """
         if metrica not in self.METRICAS_SERIE_TEMPORAL:
             return []
@@ -197,6 +202,21 @@ class GraficoService:
         campo_valor = self.CAMPOS_FILTRO_VALOR.get(metrica)
         if campo_valor and valor:
             filtros_extra[campo_valor] = valor
+        if advogado_id and metrica == 'tarefas':
+            if tarefa_tipo == 'criadas':
+                filtros_extra['advogadoCriadorId'] = advogado_id
+            elif tarefa_tipo == 'concluidas':
+                campo_data = 'dataConclusao'
+                filtros_extra['advogadoResponsavelId'] = advogado_id
+            else:
+                filtros_extra['advogadoResponsavelId'] = advogado_id
+        if parceiro is not None and metrica == 'clientes':
+            if parceiro == 'null':
+                filtros_extra['parceiro__isnull'] = True
+            else:
+                filtros_extra['parceiro_id'] = parceiro
+        if contrato is not None and metrica == 'clientes':
+            filtros_extra['contrato'] = contrato
         hoje = timezone.localdate()
         inicio = hoje - timedelta(days=dias - 1)
         mensal = dias > 62
@@ -239,11 +259,13 @@ class GraficoService:
             for dia in periodo
         ]
 
-        if metrica == 'tarefas':
+        if metrica == 'tarefas' and tarefa_tipo is None:
             filtros_conclusao = {
                 'deletada': False,
                 'dataConclusao__date__gte': inicio,
             }
+            if advogado_id:
+                filtros_conclusao['advogadoResponsavelId'] = advogado_id
             contagens_concluidas = {
                 (k.date() if isinstance(k, datetime) else k): v
                 for k, v in Tarefas.objects

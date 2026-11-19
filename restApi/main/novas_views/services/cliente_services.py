@@ -5,7 +5,7 @@ from datetime import datetime
 from main.models import Cliente, ClienteEspera
 
 class ClienteService:
-    ALLOWED_FIELDS = ['nome', 'cpf', 'telefone', 'inss', 'parceiro']
+    ALLOWED_FIELDS = ['nome', 'cpf', 'telefone', 'inss', 'parceiro', 'parceiroId']
     ALLOWED_ORDER_FIELDS = [
         'id', 'nome', 'cpf', 'telefone', 'inss', 'parceiro',
         'prioridade', '-prioridade'
@@ -81,6 +81,11 @@ class ClienteService:
                 queryset = queryset.filter(**{f"{field}__icontains": value})
             elif field == 'parceiro':
                 queryset = queryset.filter(parceiro__nome__icontains=value)
+            elif field == 'parceiroId':
+                if value in ('null', ''):
+                    queryset = queryset.filter(parceiro__isnull=True)
+                else:
+                    queryset = queryset.filter(parceiro_id=value)
         
         if order_by:
             if order_by not in self.ALLOWED_ORDER_FIELDS:

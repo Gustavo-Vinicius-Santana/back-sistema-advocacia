@@ -111,8 +111,30 @@ class GraficoSerieTemporalView(APIView):
         if dias not in self.DIAS_VALIDOS:
             dias = 30
 
+        advogado = request.query_params.get('advogado')
+        try:
+            advogado_id = int(advogado) if advogado else None
+        except (TypeError, ValueError):
+            advogado_id = None
+
+        tarefa_tipo = request.query_params.get('tipo')
+        if tarefa_tipo not in ('criadas', 'concluidas'):
+            tarefa_tipo = None
+
+        parceiro = request.query_params.get('parceiro')
+        if parceiro is not None and parceiro != 'null':
+            try:
+                parceiro = int(parceiro)
+            except (TypeError, ValueError):
+                parceiro = None
+
+        contrato_param = request.query_params.get('contrato')
+        contrato = None
+        if contrato_param is not None:
+            contrato = contrato_param.lower() in ('true', '1')
+
         service = GraficoService()
         json_file = service.obter_serie_temporal(
-            metrica, dias, request.query_params.get('valor')
+            metrica, dias, request.query_params.get('valor'), advogado_id, tarefa_tipo, parceiro, contrato
         )
         return JsonResponse(json_file, safe=False)
