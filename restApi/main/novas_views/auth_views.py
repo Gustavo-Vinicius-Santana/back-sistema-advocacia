@@ -170,10 +170,20 @@ class CustomTokenRefreshView(APIView):
     throttle_scope = 'token_refresh'
     throttle_classes = [ScopedRateThrottle]
 
+    def _clear_auth_cookies(self, response):
+        cookie_kwargs = {
+            'path': '/',
+            'samesite': settings.JWT_COOKIE_SAMESITE,
+        }
+        response.delete_cookie('access_token', **cookie_kwargs)
+        response.delete_cookie('refresh_token', **cookie_kwargs)
+        return response
+
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return JsonResponse({'error': 'Refresh token não encontrado'}, status=401)
+            response = JsonResponse({'error': 'Refresh token não encontrado'}, status=401)
+            return self._clear_auth_cookies(response)
         
         try:
             serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
@@ -202,7 +212,8 @@ class CustomTokenRefreshView(APIView):
             )
             return response
         except TokenError:
-            return JsonResponse({'error': 'Refresh token inválido ou expirado'}, status=401)
+            response = JsonResponse({'error': 'Refresh token inválido ou expirado'}, status=401)
+            return self._clear_auth_cookies(response)
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
